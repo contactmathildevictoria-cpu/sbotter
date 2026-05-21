@@ -36,11 +36,11 @@ if (mode === "fixture") {
   await crawler.run(startUrls);
 }
 
-// Ship the dataset to the Spotter webhook if WEBHOOK_URL is configured.
+// Ship the dataset to the Sbotter webhook if WEBHOOK_URL is configured.
 // This lets us bypass Apify's built-in webhooks entirely and keep signing
 // inside the Actor itself — useful for local apify-cli runs.
-const webhookUrl = process.env.SPOTTER_WEBHOOK_URL;
-const webhookSecret = process.env.SPOTTER_WEBHOOK_SECRET;
+const webhookUrl = process.env.SBOTTER_WEBHOOK_URL;
+const webhookSecret = process.env.SBOTTER_WEBHOOK_SECRET;
 
 if (webhookUrl && webhookSecret) {
   const dataset = await Dataset.open();
@@ -59,7 +59,7 @@ if (webhookUrl && webhookSecret) {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-spotter-signature": signature,
+      "x-sbotter-signature": signature,
     },
     body,
   });
@@ -69,7 +69,7 @@ if (webhookUrl && webhookSecret) {
   }
 } else {
   log.info(
-    "SPOTTER_WEBHOOK_URL or SPOTTER_WEBHOOK_SECRET not set — skipping webhook.",
+    "SBOTTER_WEBHOOK_URL or SBOTTER_WEBHOOK_SECRET not set — skipping webhook.",
   );
 }
 

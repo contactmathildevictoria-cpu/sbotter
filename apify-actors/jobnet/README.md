@@ -1,6 +1,6 @@
-# Spotter — Jobnet.dk Actor
+# Sbotter — Jobnet.dk Actor
 
-Crawlee Actor that scrapes job postings from job.jobnet.dk and ships them to the Spotter ingest webhook.
+Crawlee Actor that scrapes job postings from job.jobnet.dk and ships them to the Sbotter ingest webhook.
 
 ## Local development
 
@@ -10,8 +10,8 @@ npm install
 npm run build
 
 # Fixture mode (default) — pushes the bundled sample-items.json
-SPOTTER_WEBHOOK_URL=http://localhost:3000/api/ingest/apify \
-SPOTTER_WEBHOOK_SECRET=$APIFY_WEBHOOK_SECRET \
+SBOTTER_WEBHOOK_URL=http://localhost:3000/api/ingest/apify \
+SBOTTER_WEBHOOK_SECRET=$APIFY_WEBHOOK_SECRET \
   npx apify run --purge
 ```
 
@@ -19,7 +19,7 @@ Set `mode: "scrape"` in the run input (or `.actor/input.json` for `apify run`) t
 
 ## Webhook signing
 
-The Actor POSTs the dataset to `SPOTTER_WEBHOOK_URL` with an `x-spotter-signature` header equal to `HMAC-SHA256(body, SPOTTER_WEBHOOK_SECRET)`. The Spotter server verifies this signature against its own `APIFY_WEBHOOK_SECRET` env var — they must match.
+The Actor POSTs the dataset to `SBOTTER_WEBHOOK_URL` with an `x-sbotter-signature` header equal to `HMAC-SHA256(body, SBOTTER_WEBHOOK_SECRET)`. The Sbotter server verifies this signature against its own `APIFY_WEBHOOK_SECRET` env var — they must match.
 
 ## Deploy to Apify
 
@@ -30,8 +30,8 @@ apify push
 
 Then in the Apify Console set:
 
-- `SPOTTER_WEBHOOK_URL` — production webhook URL (e.g. `https://spotter.example.com/api/ingest/apify`)
-- `SPOTTER_WEBHOOK_SECRET` — the same secret as the server's `APIFY_WEBHOOK_SECRET`
+- `SBOTTER_WEBHOOK_URL` — production webhook URL (e.g. `https://sbotter.example.com/api/ingest/apify`)
+- `SBOTTER_WEBHOOK_SECRET` — the same secret as the server's `APIFY_WEBHOOK_SECRET`
 
 Schedule the Actor via the Apify Console (Schedules → Create → pick this Actor → daily).
 
@@ -44,7 +44,7 @@ BODY=$(cat apify-actors/jobnet/fixtures/sample-payload.json)
 SIG=$(echo -n "$BODY" | openssl dgst -sha256 -hmac "$APIFY_WEBHOOK_SECRET" | awk '{print $2}')
 curl -X POST http://localhost:3000/api/ingest/apify \
   -H "content-type: application/json" \
-  -H "x-spotter-signature: $SIG" \
+  -H "x-sbotter-signature: $SIG" \
   --data-binary "$BODY"
 ```
 

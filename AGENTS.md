@@ -4,9 +4,9 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-# Spotter
+# Sbotter
 
-Spotter is a lead-generation platform. It scrapes job listings from Danish and international sources (starting with Jobnet.dk), normalizes them into deduplicated **companies** with their open **job_postings**, and lets users filter to find companies matching their ideal customer profile ("Copenhagen tech companies hiring sales", "everyone who posted within the last 7 days", etc.).
+Sbotter is a lead-generation platform. It scrapes job listings from Danish and international sources (starting with Jobnet.dk), normalizes them into deduplicated **companies** with their open **job_postings**, and lets users filter to find companies matching their ideal customer profile ("Copenhagen tech companies hiring sales", "everyone who posted within the last 7 days", etc.).
 
 This file is the conventions reference. Read it before writing code in this repo.
 
@@ -63,7 +63,7 @@ The leads dashboard encodes its filter state in URL search params (`q`, `city`, 
 
 - `normalize.ts` — converts a raw Jobnet item into our unified shape with a zod schema. Reuse this shape when adding new sources; only the per-source normalizer should change.
 - `apify.ts` — the upsert pipeline. Dedups companies by `cvr ?? domain ?? slug`. Upserts job postings by `(source_id, external_id)`. Marks job postings absent from the current run as `is_active = false`. Records counts in `scrape_runs`.
-- `route.ts` (the webhook) — verifies an HMAC-SHA256 signature in `x-spotter-signature` against `APIFY_WEBHOOK_SECRET`. NEVER touch the request body before verifying.
+- `route.ts` (the webhook) — verifies an HMAC-SHA256 signature in `x-sbotter-signature` against `APIFY_WEBHOOK_SECRET`. NEVER touch the request body before verifying.
 
 ### Plans
 

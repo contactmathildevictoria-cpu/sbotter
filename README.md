@@ -1,6 +1,6 @@
-# Spotter
+# Sbotter
 
-Find companies hiring right now. Spotter scrapes job postings (starting with Jobnet.dk), deduplicates them by employer, and lets you filter to spot lookalikes of your ideal customer.
+Find companies hiring right now. Sbotter scrapes job postings (starting with Jobnet.dk), deduplicates them by employer, and lets you filter to spot lookalikes of your ideal customer.
 
 ## Stack
 
@@ -52,7 +52,7 @@ BODY=$(cat apify-actors/jobnet/fixtures/sample-payload.json)
 SIG=$(echo -n "$BODY" | openssl dgst -sha256 -hmac "$APIFY_WEBHOOK_SECRET" | awk '{print $2}')
 curl -X POST http://localhost:3000/api/ingest/apify \
   -H "content-type: application/json" \
-  -H "x-spotter-signature: $SIG" \
+  -H "x-sbotter-signature: $SIG" \
   --data-binary "$BODY"
 ```
 

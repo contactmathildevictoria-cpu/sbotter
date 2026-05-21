@@ -1,11 +1,11 @@
 {
   "Brand": {
-    "name": "Spotter",
+    "name": "Sbotter",
     "tagline": "Find virksomheder der ansætter lige nu"
   },
   "Landing": {
     "headline": "Find dine næste kunder før dine konkurrenter gør.",
-    "subheadline": "Spotter overvåger jobopslag på tværs af Danmark og resten af verden, og afslører hvilke virksomheder der vokser — så du ved hvem du skal kontakte.",
+    "subheadline": "Sbotter overvåger jobopslag på tværs af Danmark og resten af verden, og afslører hvilke virksomheder der vokser — så du ved hvem du skal kontakte.",
     "ctaSignup": "Kom i gang",
     "ctaLogin": "Log ind"
   },
@@ -16,7 +16,7 @@
     "language": "Sprog"
   },
   "Auth": {
-    "loginTitle": "Log ind på Spotter",
+    "loginTitle": "Log ind på Sbotter",
     "loginSubtitle": "Indtast din email og adgangskode for at fortsætte.",
     "signupTitle": "Opret konto",
     "signupSubtitle": "Få adgang til de første 25 leads gratis.",

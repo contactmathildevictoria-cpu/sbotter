@@ -1,9 +1,9 @@
 {
-  "name": "spotter-jobnet-actor",
+  "name": "sbotter-jobnet-actor",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Spotter scraper for Jobnet.dk. Runs on the Apify platform via Crawlee; ships normalized job postings to Spotter's ingest webhook.",
+  "description": "Sbotter scraper for Jobnet.dk. Runs on the Apify platform via Crawlee; ships normalized job postings to Sbotter's ingest webhook.",
   "scripts": {
     "start": "node --enable-source-maps dist/main.js",
     "build": "tsc",

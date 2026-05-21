@@ -1,11 +1,11 @@
 {
   "Brand": {
-    "name": "Spotter",
+    "name": "Sbotter",
     "tagline": "Find companies hiring right now"
   },
   "Landing": {
     "headline": "Find your next customers before your competitors do.",
-    "subheadline": "Spotter watches job postings across Denmark and the rest of the world, revealing which companies are growing — so you know exactly who to reach out to.",
+    "subheadline": "Sbotter watches job postings across Denmark and the rest of the world, revealing which companies are growing — so you know exactly who to reach out to.",
     "ctaSignup": "Get started",
     "ctaLogin": "Log in"
   },
@@ -16,7 +16,7 @@
     "language": "Language"
   },
   "Auth": {
-    "loginTitle": "Log in to Spotter",
+    "loginTitle": "Log in to Sbotter",
     "loginSubtitle": "Enter your email and password to continue.",
     "signupTitle": "Create account",
     "signupSubtitle": "Get access to the first 25 leads for free.",

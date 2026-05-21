@@ -18,7 +18,7 @@ export function Sidebar() {
     <aside className="bg-sidebar text-sidebar-foreground hidden w-60 shrink-0 flex-col border-r md:flex">
       <div className="px-6 py-6">
         <Link href="/leads" className="text-lg font-semibold tracking-tight">
-          Spotter
+          Sbotter
         </Link>
       </div>
       <nav className="flex flex-1 flex-col gap-1 px-3 py-2">

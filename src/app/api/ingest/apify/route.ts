@@ -37,7 +37,7 @@ function verifySignature(rawBody: string, signature: string | null): boolean {
 }
 
 export async function POST(request: NextRequest) {
-  const signature = request.headers.get("x-spotter-signature");
+  const signature = request.headers.get("x-sbotter-signature");
   const rawBody = await request.text();
 
   if (!verifySignature(rawBody, signature)) {

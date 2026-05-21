@@ -2,7 +2,7 @@
   "eventType": "ACTOR.RUN.SUCCEEDED",
   "resource": {
     "id": "local-test-run",
-    "actId": "spotter-jobnet"
+    "actId": "sbotter-jobnet"
   },
   "items": [
     {

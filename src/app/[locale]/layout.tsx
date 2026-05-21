@@ -18,9 +18,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Spotter — Find companies hiring right now",
+  title: "Sbotter — Find companies hiring right now",
   description:
-    "Spotter watches job postings across Denmark and the rest of the world to surface companies that are growing and need your services.",
+    "Sbotter watches job postings across Denmark and the rest of the world to surface companies that are growing and need your services.",
 };
 
 export function generateStaticParams() {

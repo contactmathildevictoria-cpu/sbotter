@@ -2,7 +2,7 @@
 # When linked to a cloud project (`supabase link --project-ref <ref>`),
 # `supabase db push` applies the migrations in supabase/migrations/.
 
-project_id = "spotter"
+project_id = "sbotter"
 
 [api]
 enabled = true
