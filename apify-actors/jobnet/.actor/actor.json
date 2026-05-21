@@ -1,0 +1,17 @@
+{
+  "actorSpecification": 1,
+  "name": "spotter-jobnet",
+  "title": "Spotter — Jobnet.dk scraper",
+  "description": "Scrapes job postings from job.jobnet.dk and ships them to Spotter's ingest webhook.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "dockerfile": "./Dockerfile",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "title": "Normalized job postings",
+      "views": {}
+    }
+  }
+}

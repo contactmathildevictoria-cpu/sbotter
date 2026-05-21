@@ -1,0 +1,89 @@
+{
+  "eventType": "ACTOR.RUN.SUCCEEDED",
+  "resource": {
+    "id": "local-test-run",
+    "actId": "spotter-jobnet"
+  },
+  "items": [
+    {
+      "externalId": "5901234",
+      "title": "Marketing Specialist",
+      "description": "Vi søger en marketing specialist til vores team i København.",
+      "category": "marketing",
+      "url": "https://job.jobnet.dk/CV/FindWork/Details/5901234",
+      "postedAt": "2026-05-18T08:00:00Z",
+      "expiresAt": "2026-06-18T08:00:00Z",
+      "location": { "city": "København", "region": "Hovedstaden", "country": "DK" },
+      "company": {
+        "name": "Acme Marketing A/S",
+        "cvr": "12345678",
+        "website": "https://acme-marketing.dk",
+        "description": "Et marketingbureau i hjertet af København."
+      }
+    },
+    {
+      "externalId": "5901235",
+      "title": "Senior Brand Manager",
+      "description": "Lead our brand strategy across the Nordics.",
+      "category": null,
+      "url": "https://job.jobnet.dk/CV/FindWork/Details/5901235",
+      "postedAt": "2026-05-17T12:30:00Z",
+      "expiresAt": "2026-06-17T12:30:00Z",
+      "location": { "city": "København", "region": "Hovedstaden", "country": "DK" },
+      "company": {
+        "name": "Acme Marketing A/S",
+        "cvr": "12345678",
+        "website": "https://acme-marketing.dk",
+        "description": null
+      }
+    },
+    {
+      "externalId": "5912345",
+      "title": "Backend Developer (Go)",
+      "description": "Build scalable services in Go.",
+      "category": null,
+      "url": "https://job.jobnet.dk/CV/FindWork/Details/5912345",
+      "postedAt": "2026-05-19T09:00:00Z",
+      "expiresAt": "2026-06-19T09:00:00Z",
+      "location": { "city": "Aarhus", "region": "Midtjylland", "country": "DK" },
+      "company": {
+        "name": "NorthStack ApS",
+        "cvr": "23456789",
+        "website": "https://northstack.io",
+        "description": null
+      }
+    },
+    {
+      "externalId": "5912346",
+      "title": "Sales Development Representative",
+      "description": "Open new accounts for our B2B SaaS platform.",
+      "category": "sales",
+      "url": "https://job.jobnet.dk/CV/FindWork/Details/5912346",
+      "postedAt": "2026-05-19T10:00:00Z",
+      "expiresAt": "2026-06-19T10:00:00Z",
+      "location": { "city": "Aarhus", "region": "Midtjylland", "country": "DK" },
+      "company": {
+        "name": "NorthStack ApS",
+        "cvr": "23456789",
+        "website": "https://northstack.io",
+        "description": null
+      }
+    },
+    {
+      "externalId": "5912347",
+      "title": "Account Executive",
+      "description": "Close mid-market deals for a fast-growing fintech.",
+      "category": "sales",
+      "url": "https://job.jobnet.dk/CV/FindWork/Details/5912347",
+      "postedAt": "2026-05-15T15:00:00Z",
+      "expiresAt": "2026-06-15T15:00:00Z",
+      "location": { "city": "København", "region": "Hovedstaden", "country": "DK" },
+      "company": {
+        "name": "Finlid",
+        "cvr": "34567890",
+        "website": "https://finlid.com",
+        "description": null
+      }
+    }
+  ]
+}

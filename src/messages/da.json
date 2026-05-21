@@ -1,0 +1,94 @@
+{
+  "Brand": {
+    "name": "Spotter",
+    "tagline": "Find virksomheder der ansætter lige nu"
+  },
+  "Landing": {
+    "headline": "Find dine næste kunder før dine konkurrenter gør.",
+    "subheadline": "Spotter overvåger jobopslag på tværs af Danmark og resten af verden, og afslører hvilke virksomheder der vokser — så du ved hvem du skal kontakte.",
+    "ctaSignup": "Kom i gang",
+    "ctaLogin": "Log ind"
+  },
+  "Nav": {
+    "leads": "Leads",
+    "settings": "Indstillinger",
+    "signOut": "Log ud",
+    "language": "Sprog"
+  },
+  "Auth": {
+    "loginTitle": "Log ind på Spotter",
+    "loginSubtitle": "Indtast din email og adgangskode for at fortsætte.",
+    "signupTitle": "Opret konto",
+    "signupSubtitle": "Få adgang til de første 25 leads gratis.",
+    "email": "Email",
+    "password": "Adgangskode",
+    "fullName": "Fulde navn",
+    "submitLogin": "Log ind",
+    "submitSignup": "Opret konto",
+    "switchToSignup": "Har du ikke en konto? Opret en",
+    "switchToLogin": "Har du allerede en konto? Log ind",
+    "checkEmail": "Vi har sendt dig en bekræftelsesmail. Tjek din indbakke for at fuldføre tilmeldingen.",
+    "invalidCredentials": "Forkert email eller adgangskode.",
+    "genericError": "Noget gik galt. Prøv igen."
+  },
+  "Leads": {
+    "title": "Leads",
+    "subtitle": "Find virksomheder der ansætter — filtrér efter by, kategori, størrelse og mere.",
+    "tabCompanies": "Virksomheder",
+    "tabJobs": "Job",
+    "emptyTitle": "Ingen leads endnu",
+    "emptyBody": "Når din første scraper-kørsel er færdig, dukker virksomheder op her.",
+    "columns": {
+      "name": "Virksomhed",
+      "location": "Lokation",
+      "industry": "Branche",
+      "openJobs": "Åbne job",
+      "lastSeen": "Senest set",
+      "source": "Kilde",
+      "title": "Stilling",
+      "company": "Virksomhed",
+      "category": "Kategori",
+      "postedAt": "Slået op",
+      "link": "Link"
+    },
+    "filters": {
+      "title": "Filtre",
+      "search": "Søg…",
+      "city": "By",
+      "anyCity": "Alle byer",
+      "country": "Land",
+      "anyCountry": "Alle lande",
+      "category": "Kategori",
+      "anyCategory": "Alle kategorier",
+      "since": "Slået op inden for",
+      "since24h": "Sidste 24 timer",
+      "since7d": "Sidste 7 dage",
+      "since30d": "Sidste 30 dage",
+      "sinceAny": "Når som helst",
+      "minOpenJobs": "Min. åbne job",
+      "source": "Kilde",
+      "reset": "Nulstil"
+    },
+    "categories": {
+      "marketing": "Marketing",
+      "sales": "Salg",
+      "tech": "Tech",
+      "ops": "Drift",
+      "other": "Andet"
+    },
+    "pagination": {
+      "next": "Næste",
+      "prev": "Forrige",
+      "page": "Side {page}"
+    }
+  },
+  "Settings": {
+    "title": "Indstillinger",
+    "profile": "Profil",
+    "email": "Email",
+    "plan": "Abonnement",
+    "upgrade": "Opgrader",
+    "upgradeComingSoon": "Snart tilgængelig",
+    "signOut": "Log ud"
+  }
+}

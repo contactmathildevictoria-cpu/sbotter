@@ -1,0 +1,94 @@
+{
+  "Brand": {
+    "name": "Spotter",
+    "tagline": "Find companies hiring right now"
+  },
+  "Landing": {
+    "headline": "Find your next customers before your competitors do.",
+    "subheadline": "Spotter watches job postings across Denmark and the rest of the world, revealing which companies are growing — so you know exactly who to reach out to.",
+    "ctaSignup": "Get started",
+    "ctaLogin": "Log in"
+  },
+  "Nav": {
+    "leads": "Leads",
+    "settings": "Settings",
+    "signOut": "Sign out",
+    "language": "Language"
+  },
+  "Auth": {
+    "loginTitle": "Log in to Spotter",
+    "loginSubtitle": "Enter your email and password to continue.",
+    "signupTitle": "Create account",
+    "signupSubtitle": "Get access to the first 25 leads for free.",
+    "email": "Email",
+    "password": "Password",
+    "fullName": "Full name",
+    "submitLogin": "Log in",
+    "submitSignup": "Create account",
+    "switchToSignup": "Don't have an account? Sign up",
+    "switchToLogin": "Already have an account? Log in",
+    "checkEmail": "We sent you a confirmation email. Check your inbox to finish signing up.",
+    "invalidCredentials": "Wrong email or password.",
+    "genericError": "Something went wrong. Try again."
+  },
+  "Leads": {
+    "title": "Leads",
+    "subtitle": "Find companies that are hiring — filter by city, category, size and more.",
+    "tabCompanies": "Companies",
+    "tabJobs": "Jobs",
+    "emptyTitle": "No leads yet",
+    "emptyBody": "Once your first scraper run completes, companies will appear here.",
+    "columns": {
+      "name": "Company",
+      "location": "Location",
+      "industry": "Industry",
+      "openJobs": "Open jobs",
+      "lastSeen": "Last seen",
+      "source": "Source",
+      "title": "Title",
+      "company": "Company",
+      "category": "Category",
+      "postedAt": "Posted",
+      "link": "Link"
+    },
+    "filters": {
+      "title": "Filters",
+      "search": "Search…",
+      "city": "City",
+      "anyCity": "Any city",
+      "country": "Country",
+      "anyCountry": "Any country",
+      "category": "Category",
+      "anyCategory": "Any category",
+      "since": "Posted within",
+      "since24h": "Last 24 hours",
+      "since7d": "Last 7 days",
+      "since30d": "Last 30 days",
+      "sinceAny": "Anytime",
+      "minOpenJobs": "Min open jobs",
+      "source": "Source",
+      "reset": "Reset"
+    },
+    "categories": {
+      "marketing": "Marketing",
+      "sales": "Sales",
+      "tech": "Tech",
+      "ops": "Operations",
+      "other": "Other"
+    },
+    "pagination": {
+      "next": "Next",
+      "prev": "Previous",
+      "page": "Page {page}"
+    }
+  },
+  "Settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "email": "Email",
+    "plan": "Plan",
+    "upgrade": "Upgrade",
+    "upgradeComingSoon": "Coming soon",
+    "signOut": "Sign out"
+  }
+}
