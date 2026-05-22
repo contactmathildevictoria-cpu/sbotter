@@ -44,8 +44,8 @@ Live in `src/lib/<feature>/actions.ts` with `"use server"` at the top. Validate 
 ### Auth
 
 - Email + password only (v1). Magic link / OAuth deferred.
-- `middleware.ts` chains next-intl with Supabase session refresh + redirects unauthenticated users on gated paths.
-- The `(app)` route group does a second-layer `getUser()` check and redirects to `/login` to defend against any middleware bypass.
+- `src/proxy.ts` chains next-intl with Supabase session refresh + redirects unauthenticated users on gated paths. (Next.js 16 renamed `middleware` → `proxy`; the file MUST be `src/proxy.ts` and export a `proxy` function, or locale routing silently never runs.)
+- The `(app)` route group does a second-layer `getUser()` check and redirects to `/login` to defend against any proxy bypass.
 - Public routes: `/`, `/login`, `/signup`, `/auth/*`, `/api/*`.
 
 ### i18n

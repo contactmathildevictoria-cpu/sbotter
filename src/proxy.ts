@@ -3,6 +3,10 @@ import createIntlMiddleware from "next-intl/middleware";
 import { createServerClient } from "@supabase/ssr";
 import { routing } from "@/lib/i18n/routing";
 
+// Next.js 16 renamed "middleware" to "proxy". This file MUST be named
+// `proxy.ts` and live at the same level as `app/` (i.e. inside `src/`),
+// otherwise it is silently ignored and locale routing never runs.
+
 const PUBLIC_PATTERNS: RegExp[] = [
   /^\/$/,
   /^\/login$/,
@@ -21,7 +25,7 @@ function isPublicPath(pathname: string): boolean {
 
 const intlMiddleware = createIntlMiddleware(routing);
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // API routes manage their own auth/verification.

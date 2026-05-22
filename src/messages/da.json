@@ -82,6 +82,11 @@
       "page": "Side {page}"
     }
   },
+  "NotFound": {
+    "title": "Siden findes ikke",
+    "body": "Vi kunne ikke finde den side, du leder efter.",
+    "cta": "Tilbage til leads"
+  },
   "Settings": {
     "title": "Indstillinger",
     "profile": "Profil",
