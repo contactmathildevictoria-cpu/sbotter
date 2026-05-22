@@ -63,7 +63,7 @@ The leads dashboard encodes its filter state in URL search params (`q`, `city`, 
 
 - `normalize.ts` — converts a raw Jobnet item into our unified shape with a zod schema. Reuse this shape when adding new sources; only the per-source normalizer should change.
 - `apify.ts` — the upsert pipeline. Dedups companies by `cvr ?? domain ?? slug`. Upserts job postings by `(source_id, external_id)`. Marks job postings absent from the current run as `is_active = false`. Records counts in `scrape_runs`.
-- `route.ts` (the webhook) — verifies an HMAC-SHA256 signature in `x-sbotter-signature` against `APIFY_WEBHOOK_SECRET`. NEVER touch the request body before verifying.
+- `route.ts` (the webhook) — accepts EITHER an HMAC-SHA256 signature in `x-sbotter-signature` (verified against `APIFY_WEBHOOK_SECRET`; used by our Actor + local tests) OR a static `Authorization: Bearer <token>` matching `APIFY_WEBHOOK_TOKEN` (used by Apify's native webhooks, which can't compute the HMAC). NEVER touch the request body before verifying.
 
 ### Plans
 

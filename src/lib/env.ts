@@ -33,6 +33,11 @@ export const env = {
   get apifyWebhookSecret() {
     return required("APIFY_WEBHOOK_SECRET", process.env.APIFY_WEBHOOK_SECRET);
   },
+  get apifyWebhookToken() {
+    // Static bearer token Apify sends via Authorization header (it can't compute
+    // our HMAC). Optional: the ingest route also accepts an x-sbotter-signature.
+    return optional(process.env.APIFY_WEBHOOK_TOKEN);
+  },
   get appUrl() {
     return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   },
