@@ -1,15 +1,16 @@
 import { Actor, log } from "apify";
-import { CheerioCrawler, Dataset } from "crawlee";
+import { Dataset, PlaywrightCrawler } from "crawlee";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { createHmac } from "node:crypto";
-import { router } from "./routes.js";
+import { createJobnetSearchHandler } from "./routes.js";
 
 type ActorInput = {
   mode?: "fixture" | "scrape";
-  startUrls?: Array<{ url: string }>;
+  searchString?: string;
   maxItems?: number;
+  orderType?: string;
 };
 
 await Actor.init();
@@ -25,15 +26,27 @@ if (mode === "fixture") {
   log.info(`fixture mode — pushing ${items.length} items`);
   await Dataset.pushData(items);
 } else {
-  const startUrls = input.startUrls?.map((u) => u.url) ?? [
-    "https://job.jobnet.dk/CV/FindWork/Search?SortValue=BestMatch",
-  ];
-  const crawler = new CheerioCrawler({
-    requestHandler: router,
-    maxRequestsPerCrawl: input.maxItems ?? 100,
+  const searchString = input.searchString ?? "";
+  const maxItems = input.maxItems ?? 100;
+  const orderType = input.orderType ?? "BestMatch";
+
+  // Jobnet.dk is a Relay SPA whose job data comes from a session-gated JSON BFF.
+  // We render /find-job once with a real browser to obtain the session, then the
+  // handler calls the BFF directly and paginates. See src/routes.ts.
+  const crawler = new PlaywrightCrawler({
+    headless: true,
+    maxRequestsPerCrawl: 1,
+    navigationTimeoutSecs: 90,
+    requestHandlerTimeoutSecs: 300,
+    requestHandler: createJobnetSearchHandler({ searchString, maxItems, orderType }),
   });
-  log.info(`scrape mode — starting from ${startUrls.length} URL(s)`);
-  await crawler.run(startUrls);
+
+  log.info(
+    `scrape mode — searchString="${searchString}", maxItems=${maxItems}, orderType=${orderType}`,
+  );
+  await crawler.run([
+    { url: "https://jobnet.dk/find-job", label: "SEARCH" },
+  ]);
 }
 
 // Ship the dataset to the Sbotter webhook if WEBHOOK_URL is configured.
