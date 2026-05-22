@@ -24,27 +24,48 @@ const payloadSchema = z.object({
   items: z.array(z.unknown()).optional(),
 });
 
-function verifySignature(rawBody: string, signature: string | null): boolean {
-  if (!signature) return false;
-  const secret = env.apifyWebhookSecret;
-  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
-  if (signature.length !== expected.length) return false;
+function timingSafeMatch(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
   try {
-    return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+    return timingSafeEqual(Buffer.from(a), Buffer.from(b));
   } catch {
     return false;
   }
+}
+
+// HMAC-SHA256 of the raw body — used by our own Crawlee Actor and local tests,
+// which can compute the signature from the shared APIFY_WEBHOOK_SECRET.
+function verifySignature(rawBody: string, signature: string | null): boolean {
+  if (!signature) return false;
+  const expected = createHmac("sha256", env.apifyWebhookSecret)
+    .update(rawBody)
+    .digest("hex");
+  return timingSafeMatch(signature, expected);
+}
+
+// Static bearer token — used by Apify's native webhooks, which can't compute our
+// HMAC but can send a fixed `Authorization: Bearer <token>` header.
+function verifyBearerToken(authHeader: string | null): boolean {
+  if (!authHeader) return false;
+  const expected = env.apifyWebhookToken;
+  if (!expected) return false;
+  const prefix = "Bearer ";
+  if (!authHeader.startsWith(prefix)) return false;
+  return timingSafeMatch(authHeader.slice(prefix.length).trim(), expected);
 }
 
 export async function POST(request: NextRequest) {
   const signature = request.headers.get("x-sbotter-signature");
   const rawBody = await request.text();
 
-  if (!verifySignature(rawBody, signature)) {
-    return NextResponse.json(
-      { error: "invalid_signature" },
-      { status: 401 },
-    );
+  // Accept either auth method: HMAC signature first (local/Actor), then a static
+  // bearer token (Apify native webhooks).
+  const authorized =
+    verifySignature(rawBody, signature) ||
+    verifyBearerToken(request.headers.get("authorization"));
+
+  if (!authorized) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   let payload: z.infer<typeof payloadSchema>;
