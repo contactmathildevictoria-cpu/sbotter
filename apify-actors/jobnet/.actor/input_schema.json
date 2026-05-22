@@ -6,27 +6,33 @@
     "mode": {
       "title": "Run mode",
       "type": "string",
-      "description": "fixture = push the bundled sample-items.json (for local testing). scrape = crawl Jobnet.dk for real.",
+      "description": "fixture = push the bundled sample-items.json (for local testing). scrape = pull live ads from Jobnet.dk's BFF search API.",
       "editor": "select",
       "enum": ["fixture", "scrape"],
       "default": "fixture"
     },
-    "startUrls": {
-      "title": "Start URLs",
-      "type": "array",
-      "description": "Search result pages to crawl when mode = scrape.",
-      "editor": "requestListSources",
-      "default": [
-        { "url": "https://job.jobnet.dk/CV/FindWork/Search?SortValue=BestMatch" }
-      ]
+    "searchString": {
+      "title": "Search string",
+      "type": "string",
+      "description": "Free-text query passed to Jobnet's search (e.g. 'marketing'). Empty = all ads.",
+      "editor": "textfield",
+      "default": ""
     },
     "maxItems": {
       "title": "Max items per run",
       "type": "integer",
-      "description": "Soft cap so dev runs don't crawl the whole site.",
+      "description": "Soft cap so dev runs don't pull all ~23k ads.",
       "default": 100,
       "minimum": 1,
       "maximum": 5000
+    },
+    "orderType": {
+      "title": "Sort order",
+      "type": "string",
+      "description": "Jobnet sort order for results.",
+      "editor": "select",
+      "enum": ["BestMatch", "PublicationDate"],
+      "default": "BestMatch"
     }
   }
 }

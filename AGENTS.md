@@ -85,4 +85,4 @@ These are not bugs — they are explicit non-goals for the foundation iteration:
 - API access (Enterprise feature).
 - Saved filters UI (the table exists in the schema; no UI yet).
 - Multi-tenant orgs (the user explicitly chose individual accounts for v1).
-- Production-grade Jobnet selectors (the Actor scaffold uses best-guess selectors; expect to tune them before scheduling daily runs).
+- Apify *platform* deployment + scheduling (the `scrape` mode works locally against Jobnet's live BFF JSON API via Playwright; `apify push` + a daily schedule still need to be set up).
