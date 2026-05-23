@@ -1,0 +1,219 @@
+import "server-only";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { env } from "@/lib/env";
+
+// Free Danish CVR registry API. No account needed — just a valid User-Agent in
+// the format "[company] - [project] - [contact]". 50 lookups/day/IP unless a
+// CVRAPI_TOKEN is set (then we authenticate via HTTP Basic).
+// Docs: https://cvrapi.dk/documentation
+const CVR_API_URL = "https://cvrapi.dk/api";
+const USER_AGENT = "Spotter - Lead enrichment - mvlm@evolugic.com";
+
+interface CvrApiResponse {
+  vat: number;
+  name: string;
+  protected: boolean;
+  phone: string | null;
+  email: string | null;
+  industrycode: number | null;
+  industrydesc: string | null;
+  companycode: number;
+  companydesc: string;
+  creditbankrupt: boolean;
+  owners: Array<{ name: string }> | null;
+  error?: string;
+}
+
+export interface CvrEnrichmentResult {
+  phone: string | null;
+  email: string | null;
+  contactPersonName: string | null;
+  industryCode: number | null;
+  industryText: string | null;
+  companyType: string;
+  isAdProtected: boolean;
+  isBankrupt: boolean;
+  cvrNumber: number;
+}
+
+type FetchOutcome =
+  | "ok"
+  | "not_found"
+  | "quota"
+  | "invalid_request"
+  | "network_error";
+
+function toResult(json: CvrApiResponse): CvrEnrichmentResult {
+  return {
+    phone: json.phone ?? null,
+    email: json.email ?? null,
+    contactPersonName: json.owners?.[0]?.name ?? null,
+    industryCode: json.industrycode ?? null,
+    industryText: json.industrydesc ?? null,
+    companyType: json.companydesc,
+    isAdProtected: Boolean(json.protected),
+    isBankrupt: Boolean(json.creditbankrupt),
+    cvrNumber: json.vat,
+  };
+}
+
+// Single network call. Returns a structured outcome so callers can distinguish
+// "no such company" (definitive) from transient failures (quota/network) that
+// are worth retrying. Never throws.
+async function cvrFetch(params: { vat?: string; name?: string }): Promise<{
+  result: CvrEnrichmentResult | null;
+  matchedName: string | null;
+  outcome: FetchOutcome;
+}> {
+  const search = new URLSearchParams({ country: "dk" });
+  if (params.vat) search.set("vat", params.vat);
+  else if (params.name) search.set("name", params.name);
+
+  const headers: Record<string, string> = {
+    "User-Agent": USER_AGENT,
+    Accept: "application/json",
+  };
+  if (env.cvrApiToken) {
+    headers.Authorization = `Basic ${Buffer.from(`${env.cvrApiToken}:`).toString("base64")}`;
+  }
+
+  let json: CvrApiResponse;
+  try {
+    const res = await fetch(`${CVR_API_URL}?${search.toString()}`, {
+      headers,
+      cache: "no-store",
+    });
+    json = (await res.json()) as CvrApiResponse;
+  } catch (err) {
+    console.error("[cvr] network error:", err);
+    return { result: null, matchedName: null, outcome: "network_error" };
+  }
+
+  if (json.error) {
+    switch (json.error) {
+      case "NOT_FOUND":
+        return { result: null, matchedName: null, outcome: "not_found" };
+      case "QUOTA_EXCEEDED":
+        console.warn(
+          "[cvr] QUOTA_EXCEEDED — daily lookup limit reached. Set CVRAPI_TOKEN to remove it.",
+        );
+        return { result: null, matchedName: null, outcome: "quota" };
+      default:
+        // INVALID_UA, INVALID_VAT, or anything else.
+        console.error(`[cvr] API error: ${json.error}`);
+        return { result: null, matchedName: null, outcome: "invalid_request" };
+    }
+  }
+
+  return { result: toResult(json), matchedName: json.name ?? null, outcome: "ok" };
+}
+
+function normalizeName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\b(aps|a\/s|i\/s|p\/s|ivs|k\/s|holding)\b/g, "")
+    .replace(/[^a-z0-9æøå ]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Name search is fuzzy, so only trust a result whose returned name reasonably
+// matches what we asked for (after stripping company-form suffixes).
+function namesMatch(input: string, matched: string | null): boolean {
+  if (!matched) return false;
+  const a = normalizeName(input);
+  const b = normalizeName(matched);
+  if (!a || !b) return false;
+  return a === b || a.includes(b) || b.includes(a);
+}
+
+/** Look up a company by exact CVR number. Never throws; null on any failure. */
+export async function lookupByCvr(
+  cvrNumber: string,
+): Promise<CvrEnrichmentResult | null> {
+  return (await cvrFetch({ vat: cvrNumber })).result;
+}
+
+/** Look up by company name (fuzzy). Returns null if the match looks unreliable. */
+export async function lookupByName(
+  companyName: string,
+): Promise<CvrEnrichmentResult | null> {
+  const { result, matchedName } = await cvrFetch({ name: companyName });
+  if (!result || !namesMatch(companyName, matchedName)) return null;
+  return result;
+}
+
+/**
+ * Enrich a single company row from CVR. Prefers exact CVR lookup, falls back to
+ * name search. Writes results + status to the companies table. Never throws —
+ * on transient failure it marks the row 'failed' (retryable); on a genuine miss
+ * it marks 'no_match'.
+ */
+export async function enrichCompanyFromCvr(
+  companyId: string,
+  cvrNumber: string | null,
+  companyName: string,
+): Promise<void> {
+  const supabase = createSupabaseServiceClient();
+
+  try {
+    let result: CvrEnrichmentResult | null = null;
+    let outcome: FetchOutcome = "not_found";
+    let foundViaName = false;
+
+    if (cvrNumber) {
+      const r = await cvrFetch({ vat: cvrNumber });
+      result = r.result;
+      outcome = r.outcome;
+    } else {
+      const r = await cvrFetch({ name: companyName });
+      if (r.result && namesMatch(companyName, r.matchedName)) {
+        result = r.result;
+        outcome = "ok";
+        foundViaName = true;
+      } else {
+        // A returned-but-mismatched name counts as a definitive miss.
+        outcome = r.outcome === "ok" ? "not_found" : r.outcome;
+      }
+    }
+
+    if (result) {
+      await supabase
+        .from("companies")
+        .update({
+          phone: result.phone,
+          email: result.email,
+          contact_person_name: result.contactPersonName,
+          cvr_industry_code: result.industryCode,
+          cvr_industry_text: result.industryText,
+          cvr_company_type: result.companyType,
+          is_ad_protected: result.isAdProtected,
+          is_bankrupt: result.isBankrupt,
+          cvr_enrichment_status: "enriched",
+          cvr_enriched_at: new Date().toISOString(),
+          // Backfill the CVR number we discovered via name search.
+          ...(foundViaName ? { cvr: String(result.cvrNumber) } : {}),
+        })
+        .eq("id", companyId);
+      return;
+    }
+
+    // not_found / name-mismatch → no_match (definitive). Everything else
+    // (quota, network, invalid) → failed (retryable).
+    const status = outcome === "not_found" ? "no_match" : "failed";
+    await supabase
+      .from("companies")
+      .update({ cvr_enrichment_status: status })
+      .eq("id", companyId);
+  } catch (err) {
+    console.error(`[cvr] enrichment failed for company ${companyId}:`, err);
+    try {
+      await supabase
+        .from("companies")
+        .update({ cvr_enrichment_status: "failed" })
+        .eq("id", companyId);
+    } catch {
+      // swallow — we already logged the original error
+    }
+  }
+}

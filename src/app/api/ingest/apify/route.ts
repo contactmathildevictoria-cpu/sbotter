@@ -6,6 +6,7 @@ import {
   fetchApifyDatasetItems,
   processJobnetItems,
 } from "@/lib/ingest/apify";
+import { enrichCompanyFromCvr } from "@/lib/cvr";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -104,11 +105,22 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await processJobnetItems(items, {
+    const { enrichmentCandidates, ...result } = await processJobnetItems(items, {
       apifyRunId: payload.resource?.id,
       apifyActorId: payload.resource?.actId,
     });
-    return NextResponse.json({ ok: true, ...result });
+
+    // Fire CVR enrichment without blocking the webhook response. Each call is
+    // self-contained (writes its own status) and never throws.
+    for (const c of enrichmentCandidates) {
+      void enrichCompanyFromCvr(c.id, c.cvr, c.name).catch(console.error);
+    }
+
+    return NextResponse.json({
+      ok: true,
+      ...result,
+      enrichmentQueued: enrichmentCandidates.length,
+    });
   } catch (err) {
     return NextResponse.json(
       {

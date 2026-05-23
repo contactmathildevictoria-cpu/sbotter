@@ -7,11 +7,21 @@ import {
   type NormalizedJob,
 } from "@/lib/ingest/normalize";
 
+/** A company that still needs CVR enrichment (newly inserted or still pending). */
+export type EnrichmentCandidate = {
+  id: string;
+  cvr: string | null;
+  name: string;
+};
+
 export type IngestResult = {
   itemsReceived: number;
   companiesUpserted: number;
   jobsUpserted: number;
   jobsDeactivated: number;
+  // Companies whose cvr_enrichment_status is still 'pending'. The caller fires
+  // enrichment for these (fire-and-forget) so the webhook response isn't blocked.
+  enrichmentCandidates: EnrichmentCandidate[];
 };
 
 export async function fetchApifyDatasetItems(
@@ -91,10 +101,13 @@ export async function processJobnetItems(
     }
 
     const companyIdBySlug = new Map<string, string>();
+    const enrichmentCandidates: EnrichmentCandidate[] = [];
     let companiesUpserted = 0;
     const now = new Date().toISOString();
 
     for (const company of companyByKey.values()) {
+      // Note: we deliberately don't set cvr_enrichment_status in the upsert, so
+      // it defaults to 'pending' on insert and is left untouched on update.
       const { data, error } = await supabase
         .from("companies")
         .upsert(
@@ -112,7 +125,7 @@ export async function processJobnetItems(
           },
           { onConflict: "slug" },
         )
-        .select("id, slug")
+        .select("id, slug, cvr, name, cvr_enrichment_status")
         .single();
       if (error) {
         throw new Error(
@@ -121,6 +134,12 @@ export async function processJobnetItems(
       }
       companyIdBySlug.set(data.slug, data.id);
       companiesUpserted += 1;
+
+      // Enrich anything not yet enriched (new rows default to 'pending'; existing
+      // 'enriched' rows are skipped). Failed/no_match rows are left for manual retry.
+      if (data.cvr_enrichment_status === "pending") {
+        enrichmentCandidates.push({ id: data.id, cvr: data.cvr, name: data.name });
+      }
     }
 
     // 4) Upsert job postings.
@@ -192,6 +211,7 @@ export async function processJobnetItems(
       companiesUpserted,
       jobsUpserted,
       jobsDeactivated,
+      enrichmentCandidates,
     };
   } catch (err) {
     await supabase

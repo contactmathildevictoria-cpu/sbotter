@@ -12,6 +12,13 @@ export type Json =
 
 export type PlanTier = "free" | "pro" | "enterprise";
 
+export type CvrEnrichmentStatus =
+  | "pending"
+  | "enriched"
+  | "failed"
+  | "no_match"
+  | "skipped";
+
 export type Database = {
   public: {
     Tables: {
@@ -93,6 +100,16 @@ export type Database = {
           last_seen_at: string;
           open_jobs_count: number;
           enrichment: Json | null;
+          phone: string | null;
+          email: string | null;
+          contact_person_name: string | null;
+          cvr_industry_code: number | null;
+          cvr_industry_text: string | null;
+          cvr_company_type: string | null;
+          is_ad_protected: boolean;
+          is_bankrupt: boolean;
+          cvr_enriched_at: string | null;
+          cvr_enrichment_status: CvrEnrichmentStatus;
           created_at: string;
           updated_at: string;
         };
@@ -113,6 +130,16 @@ export type Database = {
           last_seen_at?: string;
           open_jobs_count?: number;
           enrichment?: Json | null;
+          phone?: string | null;
+          email?: string | null;
+          contact_person_name?: string | null;
+          cvr_industry_code?: number | null;
+          cvr_industry_text?: string | null;
+          cvr_company_type?: string | null;
+          is_ad_protected?: boolean;
+          is_bankrupt?: boolean;
+          cvr_enriched_at?: string | null;
+          cvr_enrichment_status?: CvrEnrichmentStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -133,6 +160,16 @@ export type Database = {
           last_seen_at?: string;
           open_jobs_count?: number;
           enrichment?: Json | null;
+          phone?: string | null;
+          email?: string | null;
+          contact_person_name?: string | null;
+          cvr_industry_code?: number | null;
+          cvr_industry_text?: string | null;
+          cvr_company_type?: string | null;
+          is_ad_protected?: boolean;
+          is_bankrupt?: boolean;
+          cvr_enriched_at?: string | null;
+          cvr_enrichment_status?: CvrEnrichmentStatus;
           created_at?: string;
           updated_at?: string;
         };

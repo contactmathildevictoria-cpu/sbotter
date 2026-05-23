@@ -40,6 +40,7 @@
     "emptyBody": "Once your first scraper run completes, companies will appear here.",
     "columns": {
       "name": "Company",
+      "contact": "Contact",
       "location": "Location",
       "industry": "Industry",
       "openJobs": "Open jobs",
@@ -75,6 +76,15 @@
       "tech": "Tech",
       "ops": "Operations",
       "other": "Other"
+    },
+    "enrich": {
+      "pending": "Fetching data…",
+      "failed": "Lookup failed",
+      "noMatch": "No CVR match",
+      "retry": "Retry",
+      "retryError": "Couldn't refresh. Try again.",
+      "adProtected": "Ad-protected in CVR",
+      "bankrupt": "Bankrupt"
     },
     "pagination": {
       "next": "Next",
