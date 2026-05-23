@@ -38,6 +38,10 @@ export const env = {
     // our HMAC). Optional: the ingest route also accepts an x-sbotter-signature.
     return optional(process.env.APIFY_WEBHOOK_TOKEN);
   },
+  get cvrApiToken() {
+    // Optional. Removes the 50/day cvrapi.dk rate limit (HTTP Basic auth).
+    return optional(process.env.CVRAPI_TOKEN);
+  },
   get appUrl() {
     return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   },

@@ -40,6 +40,7 @@
     "emptyBody": "Når din første scraper-kørsel er færdig, dukker virksomheder op her.",
     "columns": {
       "name": "Virksomhed",
+      "contact": "Kontakt",
       "location": "Lokation",
       "industry": "Branche",
       "openJobs": "Åbne job",
@@ -75,6 +76,15 @@
       "tech": "Tech",
       "ops": "Drift",
       "other": "Andet"
+    },
+    "enrich": {
+      "pending": "Henter data…",
+      "failed": "Kunne ikke hente",
+      "noMatch": "Ingen CVR-match",
+      "retry": "Prøv igen",
+      "retryError": "Kunne ikke opdatere. Prøv igen.",
+      "adProtected": "Reklamebeskyttet i CVR",
+      "bankrupt": "Konkurs"
     },
     "pagination": {
       "next": "Næste",
