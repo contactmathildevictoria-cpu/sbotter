@@ -42,6 +42,11 @@ export const env = {
     // Optional. Removes the 50/day cvrapi.dk rate limit (HTTP Basic auth).
     return optional(process.env.CVRAPI_TOKEN);
   },
+  get cronSecret() {
+    // Bearer secret Vercel Cron sends in the Authorization header. Optional here;
+    // the cron route refuses to run if it's not configured.
+    return optional(process.env.CRON_SECRET);
+  },
   get appUrl() {
     return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   },

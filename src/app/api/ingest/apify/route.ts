@@ -6,7 +6,6 @@ import {
   fetchApifyDatasetItems,
   processJobnetItems,
 } from "@/lib/ingest/apify";
-import { enrichCompanyFromCvr } from "@/lib/cvr";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -110,16 +109,13 @@ export async function POST(request: NextRequest) {
       apifyActorId: payload.resource?.actId,
     });
 
-    // Fire CVR enrichment without blocking the webhook response. Each call is
-    // self-contained (writes its own status) and never throws.
-    for (const c of enrichmentCandidates) {
-      void enrichCompanyFromCvr(c.id, c.cvr, c.name).catch(console.error);
-    }
-
+    // CVR enrichment is NOT done here: fire-and-forget promises get killed when
+    // a serverless response is sent. New companies are left as 'pending' and the
+    // cron job (/api/cron/enrich, every 6h) enriches them reliably + rate-limited.
     return NextResponse.json({
       ok: true,
       ...result,
-      enrichmentQueued: enrichmentCandidates.length,
+      enrichmentPending: enrichmentCandidates.length,
     });
   } catch (err) {
     return NextResponse.json(

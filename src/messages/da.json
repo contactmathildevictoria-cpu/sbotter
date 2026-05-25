@@ -84,7 +84,11 @@
       "retry": "Prøv igen",
       "retryError": "Kunne ikke opdatere. Prøv igen.",
       "adProtected": "Reklamebeskyttet i CVR",
-      "bankrupt": "Konkurs"
+      "bankrupt": "Konkurs",
+      "enrichAll": "Berig alle",
+      "enrichAllRunning": "Beriger…",
+      "enrichAllDone": "Beriget {enriched}, {failed} fejlede, {remaining} venter stadig",
+      "enrichAllError": "Kunne ikke berige. Prøv igen."
     },
     "pagination": {
       "next": "Næste",
