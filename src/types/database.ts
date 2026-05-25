@@ -19,6 +19,13 @@ export type CvrEnrichmentStatus =
   | "no_match"
   | "skipped";
 
+export type WebsiteScrapeStatus =
+  | "pending"
+  | "scraped"
+  | "failed"
+  | "no_website"
+  | "skipped";
+
 export type Database = {
   public: {
     Tables: {
@@ -110,6 +117,12 @@ export type Database = {
           is_bankrupt: boolean;
           cvr_enriched_at: string | null;
           cvr_enrichment_status: CvrEnrichmentStatus;
+          website_phone: string | null;
+          website_email: string | null;
+          website_contact_person: string | null;
+          website_contact_title: string | null;
+          website_scraped_at: string | null;
+          website_scrape_status: WebsiteScrapeStatus;
           created_at: string;
           updated_at: string;
         };
@@ -140,6 +153,12 @@ export type Database = {
           is_bankrupt?: boolean;
           cvr_enriched_at?: string | null;
           cvr_enrichment_status?: CvrEnrichmentStatus;
+          website_phone?: string | null;
+          website_email?: string | null;
+          website_contact_person?: string | null;
+          website_contact_title?: string | null;
+          website_scraped_at?: string | null;
+          website_scrape_status?: WebsiteScrapeStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -170,6 +189,12 @@ export type Database = {
           is_bankrupt?: boolean;
           cvr_enriched_at?: string | null;
           cvr_enrichment_status?: CvrEnrichmentStatus;
+          website_phone?: string | null;
+          website_email?: string | null;
+          website_contact_person?: string | null;
+          website_contact_title?: string | null;
+          website_scraped_at?: string | null;
+          website_scrape_status?: WebsiteScrapeStatus;
           created_at?: string;
           updated_at?: string;
         };

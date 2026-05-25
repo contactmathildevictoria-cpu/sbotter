@@ -6,32 +6,28 @@ import { useTranslations } from "next-intl";
 import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import type { CvrEnrichmentStatus } from "@/types/database";
+import type {
+  CvrEnrichmentStatus,
+  WebsiteScrapeStatus,
+} from "@/types/database";
 
-// Shows the CVR-enrichment state for a company: a subtle spinner while pending,
-// or a retry button for failed / no-match rows. Renders nothing once enriched.
+// Shows the enrichment state for a company that still has no contact details:
+// a subtle spinner while CVR or the website scraper is working, otherwise a
+// retry button. Rendered by CompaniesTable only when no contact was found.
+// Retry re-runs CVR and then the website scraper (see the enrich route).
 export function EnrichStatus({
   companyId,
-  status,
+  cvrStatus,
+  websiteStatus,
 }: {
   companyId: string;
-  status: CvrEnrichmentStatus;
+  cvrStatus: CvrEnrichmentStatus;
+  websiteStatus: WebsiteScrapeStatus;
 }) {
   const t = useTranslations("Leads.enrich");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [busy, setBusy] = useState(false);
-
-  if (status === "enriched" || status === "skipped") return null;
-
-  if (status === "pending" && !busy) {
-    return (
-      <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
-        <Loader2 className="size-3 animate-spin" />
-        {t("pending")}
-      </span>
-    );
-  }
 
   async function retry() {
     setBusy(true);
@@ -48,12 +44,20 @@ export function EnrichStatus({
     }
   }
 
-  const label = status === "no_match" ? t("noMatch") : t("failed");
-  const working = busy || isPending;
+  // CVR still running → CVR spinner.
+  if (!busy && cvrStatus === "pending") {
+    return <Pending label={t("pending")} />;
+  }
+  // CVR finished without a phone, website scrape still queued → website spinner.
+  if (!busy && websiteStatus === "pending") {
+    return <Pending label={t("websitePending")} />;
+  }
 
+  // Terminal: nothing found anywhere. Offer a retry.
+  const working = busy || isPending;
   return (
     <span className="inline-flex items-center gap-1 text-xs">
-      <span className="text-muted-foreground">{label}</span>
+      <span className="text-muted-foreground">{t("noContact")}</span>
       <Button
         variant="ghost"
         size="sm"
@@ -64,6 +68,15 @@ export function EnrichStatus({
       >
         <RefreshCw className={`size-3 ${working ? "animate-spin" : ""}`} />
       </Button>
+    </span>
+  );
+}
+
+function Pending({ label }: { label: string }) {
+  return (
+    <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
+      <Loader2 className="size-3 animate-spin" />
+      {label}
     </span>
   );
 }

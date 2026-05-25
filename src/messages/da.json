@@ -83,11 +83,16 @@
       "noMatch": "Ingen CVR-match",
       "retry": "Prøv igen",
       "retryError": "Kunne ikke opdatere. Prøv igen.",
+      "websitePending": "Søger kontaktinfo…",
+      "fromWebsite": "Fra hjemmeside",
+      "noContact": "Ingen kontaktinfo",
       "adProtected": "Reklamebeskyttet i CVR",
       "bankrupt": "Konkurs",
       "enrichAll": "Berig alle",
       "enrichAllRunning": "Beriger…",
       "enrichAllDone": "Beriget {enriched}, {failed} fejlede, {remaining} venter stadig",
+      "enrichAllDiscovered": "Fandt {discovered} hjemmesider",
+      "enrichAllWebsite": "Skrabede {scraped} hjemmesider for kontaktinfo",
       "enrichAllError": "Kunne ikke berige. Prøv igen."
     },
     "pagination": {

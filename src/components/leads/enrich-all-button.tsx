@@ -12,6 +12,8 @@ type BatchSummary = {
   failed: number;
   skipped: number;
   remaining: number;
+  discovery?: { processed: number; discovered: number };
+  website?: { processed: number; scraped: number };
 };
 
 export function EnrichAllButton() {
@@ -33,6 +35,14 @@ export function EnrichAllButton() {
           remaining: s.remaining,
         }),
       );
+      if (s.discovery && s.discovery.discovered > 0) {
+        toast.success(
+          t("enrichAllDiscovered", { discovered: s.discovery.discovered }),
+        );
+      }
+      if (s.website && s.website.processed > 0) {
+        toast.success(t("enrichAllWebsite", { scraped: s.website.scraped }));
+      }
       startTransition(() => router.refresh());
     } catch {
       toast.error(t("enrichAllError"));
