@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { ArrowUpRight, Mail, Phone, ShieldCheck, User } from "lucide-react";
+import { ArrowUpRight, Globe, Mail, Phone, ShieldCheck, User } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -17,6 +17,15 @@ import { formatRelativeDate } from "@/lib/format";
 function telHref(phone: string): string {
   const trimmed = phone.replace(/\s+/g, "");
   return trimmed.startsWith("+") ? trimmed : `+45${trimmed}`;
+}
+
+// Bare hostname for a compact, clickable website link.
+function displayHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
 }
 
 export async function CompaniesTable({ page }: { page: CompaniesPage }) {
@@ -38,9 +47,24 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
         </TableHeader>
         <TableBody>
           {page.rows.map((row) => {
-            const hasContact = Boolean(
+            // CVR is preferred; fall back to website-scraped values per field.
+            const phone = row.phone ?? row.website_phone;
+            const email = row.email ?? row.website_email;
+            const contactName =
+              row.contact_person_name ?? row.website_contact_person;
+            const title = row.website_contact_title; // CVR provides no title
+            const hasCvrContact = Boolean(
               row.contact_person_name || row.phone || row.email,
             );
+            // Any displayed contact came from the website (not CVR)?
+            const usesWebsite =
+              !hasCvrContact &&
+              Boolean(
+                row.website_phone ||
+                  row.website_email ||
+                  row.website_contact_person,
+              );
+            const hasAnyContact = Boolean(contactName || phone || email);
             return (
               <TableRow key={row.id}>
                 <TableCell>
@@ -65,38 +89,59 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                       {row.cvr_industry_text ?? row.industry}
                     </div>
                   ) : null}
+                  {row.website ? (
+                    <a
+                      href={row.website}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs underline-offset-4 hover:underline"
+                    >
+                      <Globe className="size-3" />
+                      {displayHost(row.website)}
+                    </a>
+                  ) : null}
                 </TableCell>
 
                 <TableCell className="text-sm">
                   <div className="space-y-0.5">
-                    {row.contact_person_name ? (
+                    {contactName ? (
                       <div className="flex items-center gap-1.5">
                         <User className="text-muted-foreground size-3.5" />
-                        <span>{row.contact_person_name}</span>
+                        <span>{contactName}</span>
+                        {title ? (
+                          <span className="text-muted-foreground">· {title}</span>
+                        ) : null}
                       </div>
                     ) : null}
-                    {row.phone ? (
+                    {phone ? (
                       <a
-                        href={`tel:${telHref(row.phone)}`}
+                        href={`tel:${telHref(phone)}`}
                         className="flex items-center gap-1.5 underline-offset-4 hover:underline"
                       >
                         <Phone className="text-muted-foreground size-3.5" />
-                        {row.phone}
+                        {phone}
                       </a>
                     ) : null}
-                    {row.email ? (
+                    {email ? (
                       <a
-                        href={`mailto:${row.email}`}
+                        href={`mailto:${email}`}
                         className="flex items-center gap-1.5 underline-offset-4 hover:underline"
                       >
                         <Mail className="text-muted-foreground size-3.5" />
-                        {row.email}
+                        {email}
                       </a>
                     ) : null}
-                    {!hasContact ? (
+                    {usesWebsite ? (
+                      <div className="text-muted-foreground flex items-center gap-1 text-xs">
+                        <Globe className="size-3" />
+                        {tEnrich("fromWebsite")}
+                      </div>
+                    ) : null}
+                    {!hasAnyContact ? (
                       <EnrichStatus
                         companyId={row.id}
-                        status={row.cvr_enrichment_status}
+                        cvrStatus={row.cvr_enrichment_status}
+                        websiteStatus={row.website_scrape_status}
                       />
                     ) : null}
                   </div>

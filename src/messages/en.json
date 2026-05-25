@@ -83,11 +83,16 @@
       "noMatch": "No CVR match",
       "retry": "Retry",
       "retryError": "Couldn't refresh. Try again.",
+      "websitePending": "Searching for contact info…",
+      "fromWebsite": "From website",
+      "noContact": "No contact info",
       "adProtected": "Ad-protected in CVR",
       "bankrupt": "Bankrupt",
       "enrichAll": "Enrich all",
       "enrichAllRunning": "Enriching…",
       "enrichAllDone": "Enriched {enriched}, {failed} failed, {remaining} remaining",
+      "enrichAllDiscovered": "Found {discovered} websites",
+      "enrichAllWebsite": "Scraped {scraped} websites for contact info",
       "enrichAllError": "Enrichment failed. Try again."
     },
     "pagination": {
