@@ -1,0 +1,30 @@
+{
+  "title": "Input — Sbotter JobDanmark scraper",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Run mode",
+      "type": "string",
+      "description": "fixture = push the bundled sample-items.json (for local testing). scrape = pull live ads from jobdanmark.dk.",
+      "editor": "select",
+      "enum": ["fixture", "scrape"],
+      "default": "fixture"
+    },
+    "searchString": {
+      "title": "Search string",
+      "type": "string",
+      "description": "Free-text query. Empty = all jobs.",
+      "editor": "textfield",
+      "default": ""
+    },
+    "maxItems": {
+      "title": "Max items per run",
+      "type": "integer",
+      "description": "Soft cap on listings per run.",
+      "default": 5000,
+      "minimum": 1,
+      "maximum": 20000
+    }
+  }
+}

@@ -1,0 +1,36 @@
+[
+  {
+    "externalId": "jobindex-7700123",
+    "title": "Performance Marketing Manager",
+    "description": "Vi søger en datadreven performance marketing manager til vores e-commerce team.",
+    "category": null,
+    "url": "https://www.jobindex.dk/jobannonce/7700123",
+    "postedAt": "2026-05-20T00:00:00Z",
+    "expiresAt": "2026-06-20T00:00:00Z",
+    "employmentType": "fuldtid",
+    "location": { "city": "København", "region": "Hovedstaden", "country": "DK" },
+    "company": {
+      "name": "Nordic Webshop ApS",
+      "cvr": null,
+      "website": "https://nordicwebshop.dk",
+      "description": null
+    }
+  },
+  {
+    "externalId": "jobindex-7700456",
+    "title": "Backend Developer (Go)",
+    "description": "Build scalable services in Go. Remote-friendly.",
+    "category": null,
+    "url": "https://www.jobindex.dk/jobannonce/7700456",
+    "postedAt": "2026-05-19T00:00:00Z",
+    "expiresAt": "2026-06-19T00:00:00Z",
+    "employmentType": "fuldtid",
+    "location": { "city": "Aarhus", "region": "Midtjylland", "country": "DK" },
+    "company": {
+      "name": "NorthStack ApS",
+      "cvr": "23456789",
+      "website": "https://northstack.io",
+      "description": null
+    }
+  }
+]

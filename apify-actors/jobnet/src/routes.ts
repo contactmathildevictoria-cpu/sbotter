@@ -1,4 +1,5 @@
 import { Dataset, type PlaywrightCrawlingContext } from "crawlee";
+import { stripHtml } from "./shared/utils.js";
 
 // Jobnet.dk is a Next.js + Relay SPA. The public job-search data is served by a
 // JSON BFF endpoint that the page calls after load:
@@ -35,19 +36,6 @@ type SearchResponse = {
   jobAds: JobAd[];
   totalJobAdCount: number;
 };
-
-function stripHtml(html: string | null): string | null {
-  if (!html) return null;
-  const text = html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/\s+/g, " ")
-    .trim();
-  return text.length ? text.slice(0, 8000) : null;
-}
 
 // Map a raw Jobnet BFF ad into the unified shape consumed by
 // src/lib/ingest/normalize.ts (jobnetItemSchema) in the Spotter app.

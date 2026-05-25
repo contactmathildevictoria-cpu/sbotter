@@ -1,0 +1,36 @@
+[
+  {
+    "externalId": "a1b2c3d4e5f6",
+    "title": "DevOps Engineer",
+    "description": "Join our platform team. Kubernetes, Terraform, AWS. Hybrid in Copenhagen.",
+    "category": null,
+    "url": "https://dk.indeed.com/viewjob?jk=a1b2c3d4e5f6",
+    "postedAt": "2026-05-22T00:00:00Z",
+    "expiresAt": null,
+    "employmentType": "fuldtid",
+    "location": { "city": "København", "region": null, "country": "DK" },
+    "company": {
+      "name": "Cloudbridge A/S",
+      "cvr": null,
+      "website": null,
+      "description": null
+    }
+  },
+  {
+    "externalId": "f6e5d4c3b2a1",
+    "title": "Customer Success Manager",
+    "description": "Own a portfolio of SaaS accounts and drive retention.",
+    "category": null,
+    "url": "https://dk.indeed.com/viewjob?jk=f6e5d4c3b2a1",
+    "postedAt": "2026-05-20T00:00:00Z",
+    "expiresAt": null,
+    "employmentType": "fuldtid",
+    "location": { "city": "Aarhus", "region": null, "country": "DK" },
+    "company": {
+      "name": "NorthStack ApS",
+      "cvr": null,
+      "website": null,
+      "description": null
+    }
+  }
+]

@@ -1,0 +1,17 @@
+{
+  "actorSpecification": 1,
+  "name": "sbotter-jobdanmark",
+  "title": "Sbotter — JobDanmark.dk scraper",
+  "description": "Scrapes job postings (with contact email/phone where available) from jobdanmark.dk and ships them to Sbotter's ingest webhook (?source=jobdanmark).",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "dockerfile": "./Dockerfile",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "title": "Normalized job postings",
+      "views": {}
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "sbotter-apify-actors",
+  "private": true,
+  "type": "module",
+  "description": "Workspace root for Sbotter's custom Apify Actors. Holds shared utilities and the sync script that vendors them into each Actor.",
+  "scripts": {
+    "sync:shared": "node scripts/sync-shared.mjs"
+  }
+}

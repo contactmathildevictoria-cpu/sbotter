@@ -1,0 +1,37 @@
+{
+  "title": "Input — Sbotter Jobindex scraper",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Run mode",
+      "type": "string",
+      "description": "fixture = push the bundled sample-items.json (for local testing). scrape = pull live ads from jobindex.dk.",
+      "editor": "select",
+      "enum": ["fixture", "scrape"],
+      "default": "fixture"
+    },
+    "searchString": {
+      "title": "Search string",
+      "type": "string",
+      "description": "Free-text query (e.g. 'marketing'). Empty = all jobs.",
+      "editor": "textfield",
+      "default": ""
+    },
+    "location": {
+      "title": "Location",
+      "type": "string",
+      "description": "Optional location/region filter. Empty = all of Denmark.",
+      "editor": "textfield",
+      "default": ""
+    },
+    "maxItems": {
+      "title": "Max items per run",
+      "type": "integer",
+      "description": "Soft cap on listings per run.",
+      "default": 5000,
+      "minimum": 1,
+      "maximum": 20000
+    }
+  }
+}
