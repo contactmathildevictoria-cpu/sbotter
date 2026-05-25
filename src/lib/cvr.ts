@@ -1,6 +1,7 @@
 import "server-only";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { env } from "@/lib/env";
+import type { CvrEnrichmentStatus } from "@/types/database";
 
 // Free Danish CVR registry API. No account needed — just a valid User-Agent in
 // the format "[company] - [project] - [contact]". 50 lookups/day/IP unless a
@@ -143,17 +144,23 @@ export async function lookupByName(
   return result;
 }
 
+export type EnrichResult = {
+  status: CvrEnrichmentStatus;
+  quotaExceeded: boolean;
+};
+
 /**
  * Enrich a single company row from CVR. Prefers exact CVR lookup, falls back to
  * name search. Writes results + status to the companies table. Never throws —
  * on transient failure it marks the row 'failed' (retryable); on a genuine miss
- * it marks 'no_match'.
+ * it marks 'no_match'. Returns the final status and whether the API quota was
+ * hit (so batch callers can stop early).
  */
 export async function enrichCompanyFromCvr(
   companyId: string,
   cvrNumber: string | null,
   companyName: string,
-): Promise<void> {
+): Promise<EnrichResult> {
   const supabase = createSupabaseServiceClient();
 
   try {
@@ -195,16 +202,18 @@ export async function enrichCompanyFromCvr(
           ...(foundViaName ? { cvr: String(result.cvrNumber) } : {}),
         })
         .eq("id", companyId);
-      return;
+      return { status: "enriched", quotaExceeded: false };
     }
 
     // not_found / name-mismatch → no_match (definitive). Everything else
     // (quota, network, invalid) → failed (retryable).
-    const status = outcome === "not_found" ? "no_match" : "failed";
+    const status: CvrEnrichmentStatus =
+      outcome === "not_found" ? "no_match" : "failed";
     await supabase
       .from("companies")
       .update({ cvr_enrichment_status: status })
       .eq("id", companyId);
+    return { status, quotaExceeded: outcome === "quota" };
   } catch (err) {
     console.error(`[cvr] enrichment failed for company ${companyId}:`, err);
     try {
@@ -215,5 +224,84 @@ export async function enrichCompanyFromCvr(
     } catch {
       // swallow — we already logged the original error
     }
+    return { status: "failed", quotaExceeded: false };
   }
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export type BatchEnrichSummary = {
+  processed: number;
+  enriched: number;
+  failed: number;
+  skipped: number;
+  remaining: number;
+  stoppedOnQuota: boolean;
+};
+
+/**
+ * Enrich a batch of companies that are still 'pending' or 'failed' (oldest
+ * first). Used by the manual batch endpoint and the cron job. Sleeps 1s between
+ * calls to respect the rate limit, and stops early if the daily quota is hit.
+ * Batch size: 40 without a token, 200 with CVRAPI_TOKEN (no quota).
+ */
+export async function enrichPendingCompanies(): Promise<BatchEnrichSummary> {
+  const supabase = createSupabaseServiceClient();
+  const limit = env.cvrApiToken ? 200 : 40;
+
+  const { data: companies, error } = await supabase
+    .from("companies")
+    .select("id, cvr, name")
+    .in("cvr_enrichment_status", ["pending", "failed"])
+    .order("created_at", { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(`Failed to load companies to enrich: ${error.message}`);
+  }
+
+  let enriched = 0;
+  let failed = 0;
+  let skipped = 0;
+  let stoppedOnQuota = false;
+  const total = companies?.length ?? 0;
+
+  for (let i = 0; i < total; i++) {
+    const c = companies![i];
+    const { status, quotaExceeded } = await enrichCompanyFromCvr(
+      c.id,
+      c.cvr,
+      c.name,
+    );
+    if (status === "enriched") enriched++;
+    else if (status === "no_match") skipped++;
+    else failed++;
+
+    console.log(
+      `[cvr] batch ${i + 1}/${total} — ${c.name} (${c.id}) → ${status}`,
+    );
+
+    if (quotaExceeded) {
+      console.warn("[cvr] batch stopping early: daily quota exceeded");
+      stoppedOnQuota = true;
+      break;
+    }
+    if (i < total - 1) await sleep(1000);
+  }
+
+  const { count: remaining } = await supabase
+    .from("companies")
+    .select("id", { count: "exact", head: true })
+    .in("cvr_enrichment_status", ["pending", "failed"]);
+
+  const summary: BatchEnrichSummary = {
+    processed: total,
+    enriched,
+    failed,
+    skipped,
+    remaining: remaining ?? 0,
+    stoppedOnQuota,
+  };
+  console.log("[cvr] batch summary:", JSON.stringify(summary));
+  return summary;
 }
