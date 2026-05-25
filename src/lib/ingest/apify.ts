@@ -2,9 +2,10 @@ import "server-only";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { env } from "@/lib/env";
 import {
-  normalizeJobnetItem,
+  normalizeItem,
   type NormalizedCompany,
   type NormalizedJob,
+  type SourceId,
 } from "@/lib/ingest/normalize";
 
 /** A company that still needs CVR enrichment (newly inserted or still pending). */
@@ -41,8 +42,9 @@ export async function fetchApifyDatasetItems(
   return (await res.json()) as unknown[];
 }
 
-export async function processJobnetItems(
+export async function processIngestItems(
   rawItems: unknown[],
+  source: SourceId,
   ctx: { apifyRunId?: string; apifyActorId?: string } = {},
 ): Promise<IngestResult> {
   const supabase = createSupabaseServiceClient();
@@ -51,7 +53,7 @@ export async function processJobnetItems(
   const { data: runRow, error: runError } = await supabase
     .from("scrape_runs")
     .insert({
-      source_id: "jobnet",
+      source_id: source,
       apify_run_id: ctx.apifyRunId ?? null,
       apify_actor_id: ctx.apifyActorId ?? null,
       status: "running",
@@ -72,7 +74,7 @@ export async function processJobnetItems(
     const normalized: NormalizedJob[] = [];
     for (const raw of rawItems) {
       try {
-        normalized.push(normalizeJobnetItem(raw));
+        normalized.push(normalizeItem(raw, source));
       } catch {
         // Skip malformed items — they'll show up as a delta against items_received.
       }
@@ -175,9 +177,10 @@ export async function processJobnetItems(
       jobsUpserted += 1;
     }
 
-    // 5) Mark postings absent from this run as inactive — only when the run
-    //    yielded a non-trivial number of items, to avoid wiping the table on a
-    //    partial / empty run.
+    // 5) Mark postings absent from this run as inactive — only for THIS source,
+    //    and only when the run yielded a non-trivial number of items, to avoid
+    //    wiping the table on a partial / empty run. Scoping to `source` is
+    //    critical: an Indeed run must never deactivate Jobnet's postings.
     let jobsDeactivated = 0;
     if (seenExternalIds.size > 0) {
       const idsList = Array.from(seenExternalIds)
@@ -186,7 +189,7 @@ export async function processJobnetItems(
       const { data, error } = await supabase
         .from("job_postings")
         .update({ is_active: false })
-        .eq("source_id", "jobnet")
+        .eq("source_id", source)
         .eq("is_active", true)
         .not("external_id", "in", `(${idsList})`)
         .select("id");

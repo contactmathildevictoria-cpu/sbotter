@@ -1,0 +1,17 @@
+{
+  "actorSpecification": 1,
+  "name": "sbotter-jobindex",
+  "title": "Sbotter — Jobindex.dk scraper",
+  "description": "Scrapes job postings from jobindex.dk and ships them to Sbotter's ingest webhook (?source=jobindex).",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "dockerfile": "./Dockerfile",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "title": "Normalized job postings",
+      "views": {}
+    }
+  }
+}

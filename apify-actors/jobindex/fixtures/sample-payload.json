@@ -1,0 +1,26 @@
+{
+  "eventType": "ACTOR.RUN.SUCCEEDED",
+  "resource": {
+    "id": "local-test-run",
+    "actId": "sbotter-jobindex"
+  },
+  "items": [
+    {
+      "externalId": "jobindex-7700123",
+      "title": "Performance Marketing Manager",
+      "description": "Vi søger en datadreven performance marketing manager.",
+      "category": null,
+      "url": "https://www.jobindex.dk/jobannonce/7700123",
+      "postedAt": "2026-05-20T00:00:00Z",
+      "expiresAt": "2026-06-20T00:00:00Z",
+      "employmentType": "fuldtid",
+      "location": { "city": "København", "region": "Hovedstaden", "country": "DK" },
+      "company": {
+        "name": "Nordic Webshop ApS",
+        "cvr": null,
+        "website": "https://nordicwebshop.dk",
+        "description": null
+      }
+    }
+  ]
+}

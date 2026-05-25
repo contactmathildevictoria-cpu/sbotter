@@ -1,0 +1,36 @@
+[
+  {
+    "externalId": "randstad-1099234",
+    "title": "Lagermedarbejder",
+    "description": "Til en af vores kunder i Taastrup søger vi en lagermedarbejder til dag- og aftenhold.",
+    "category": null,
+    "url": "https://www.randstad.dk/jobs/lagermedarbejder_taastrup_1099234/",
+    "postedAt": "2026-05-20T00:00:00Z",
+    "expiresAt": "2026-06-10T00:00:00Z",
+    "employmentType": "fuldtid",
+    "location": { "city": "Taastrup", "region": "Hovedstaden", "country": "DK" },
+    "company": {
+      "name": "Dagrofa ApS",
+      "cvr": null,
+      "website": null,
+      "description": null
+    }
+  },
+  {
+    "externalId": "randstad-1099240",
+    "title": "Financial Controller",
+    "description": "For en fortrolig kunde i Aarhus søger vi en erfaren financial controller.",
+    "category": null,
+    "url": "https://www.randstad.dk/jobs/financial-controller_aarhus_1099240/",
+    "postedAt": "2026-05-18T00:00:00Z",
+    "expiresAt": null,
+    "employmentType": "fuldtid",
+    "location": { "city": "Aarhus", "region": "Midtjylland", "country": "DK" },
+    "company": {
+      "name": "Fortrolig (via Randstad)",
+      "cvr": null,
+      "website": null,
+      "description": null
+    }
+  }
+]

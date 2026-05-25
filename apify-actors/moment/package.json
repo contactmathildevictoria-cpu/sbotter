@@ -1,0 +1,23 @@
+{
+  "name": "sbotter-moment-actor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sbotter scraper for Moment / The Hub (thehub.io). Runs on the Apify platform via Crawlee (Playwright); ships normalized job postings to Sbotter's ingest webhook.",
+  "scripts": {
+    "start": "node --enable-source-maps dist/main.js",
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "apify": "^3.2.6",
+    "cheerio": "^1.2.0",
+    "crawlee": "^3.11.5",
+    "playwright": "^1.60.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "typescript": "^5.9.3"
+  }
+}

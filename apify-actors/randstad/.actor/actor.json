@@ -1,0 +1,17 @@
+{
+  "actorSpecification": 1,
+  "name": "sbotter-randstad",
+  "title": "Sbotter — Randstad (DK) scraper",
+  "description": "Scrapes job postings from randstad.dk (extracting the hiring client company, not Randstad) and ships them to Sbotter's ingest webhook (?source=randstad).",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "dockerfile": "./Dockerfile",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "title": "Normalized job postings",
+      "views": {}
+    }
+  }
+}

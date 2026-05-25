@@ -1,0 +1,40 @@
+[
+  {
+    "externalId": "jd-44021",
+    "title": "Account Manager B2B",
+    "description": "Opsøgende salg til danske SMV-kunder. Du får et stærkt produkt og varme leads.",
+    "category": null,
+    "url": "https://www.jobdanmark.dk/job/44021",
+    "postedAt": "2026-05-21T00:00:00Z",
+    "expiresAt": "2026-06-15T00:00:00Z",
+    "employmentType": "fuldtid",
+    "contactEmail": "job@bygmestrene.dk",
+    "contactPhone": "70203040",
+    "location": { "city": "Odense", "region": "Syddanmark", "country": "DK" },
+    "company": {
+      "name": "Bygmestrene A/S",
+      "cvr": null,
+      "website": "https://bygmestrene.dk",
+      "description": null
+    }
+  },
+  {
+    "externalId": "jd-44099",
+    "title": "Industritekniker",
+    "description": "Vi mangler en dygtig industritekniker til vores produktion i Vejle.",
+    "category": null,
+    "url": "https://www.jobdanmark.dk/job/44099",
+    "postedAt": "2026-05-18T00:00:00Z",
+    "expiresAt": null,
+    "employmentType": "fuldtid",
+    "contactEmail": "hr@vejleindustri.dk",
+    "contactPhone": "75123456",
+    "location": { "city": "Vejle", "region": "Syddanmark", "country": "DK" },
+    "company": {
+      "name": "Vejle Industri ApS",
+      "cvr": null,
+      "website": null,
+      "description": null
+    }
+  }
+]
