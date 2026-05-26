@@ -3,6 +3,7 @@ import { FilterPanel } from "@/components/leads/filter-panel";
 import { CompaniesTable } from "@/components/leads/companies-table";
 import { EmptyState } from "@/components/leads/empty-state";
 import { Pagination } from "@/components/leads/pagination";
+import { ResultsToolbar } from "@/components/leads/results-toolbar";
 import { parseFiltersFromSearchParams } from "@/lib/leads/filters";
 import {
   fetchActiveDataSources,
@@ -38,12 +39,15 @@ export default async function CompaniesPage({
           <EmptyState title={t("emptyTitle")} body={t("emptyBody")} />
         ) : (
           <>
+            <ResultsToolbar total={page.total} />
             <CompaniesTable page={page} />
-            <Pagination
-              page={page.page}
-              total={page.total}
-              pageSize={page.pageSize}
-            />
+            {filters.perPage !== "all" ? (
+              <Pagination
+                page={page.page}
+                total={page.total}
+                pageSize={page.pageSize}
+              />
+            ) : null}
           </>
         )}
       </div>
