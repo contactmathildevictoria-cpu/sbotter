@@ -41,6 +41,9 @@
     "columns": {
       "name": "Company",
       "contact": "Contact",
+      "phone": "Phone",
+      "email": "Email",
+      "contactPerson": "Contact person",
       "location": "Location",
       "industry": "Industry",
       "openJobs": "Open jobs",
