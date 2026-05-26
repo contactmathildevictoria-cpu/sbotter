@@ -11,11 +11,17 @@ export type LeadFilters = {
   minOpenJobs: number;
   sources: string[];
   page: number;
+  perPage: PerPage;
 };
 
 export const CATEGORIES = ["marketing", "sales", "tech", "ops", "other"] as const;
 export const COUNTRIES = ["DK", "SE", "NO", "DE"] as const;
 export const PAGE_SIZE = 25;
+
+// Page-size options for the leads table. "all" disables pagination and fetches
+// every matching company.
+export type PerPage = 25 | 50 | 100 | "all";
+export const PER_PAGE_OPTIONS: readonly PerPage[] = [25, 50, 100, "all"];
 
 export const DEFAULT_FILTERS: LeadFilters = {
   q: "",
@@ -26,6 +32,7 @@ export const DEFAULT_FILTERS: LeadFilters = {
   minOpenJobs: 1,
   sources: [],
   page: 1,
+  perPage: 25,
 };
 
 type RawSearchParams = Record<string, string | string[] | undefined>;
@@ -41,6 +48,12 @@ function readMany(params: RawSearchParams, key: string): string[] {
   if (!value) return [];
   if (Array.isArray(value)) return value.flatMap((v) => v.split(","));
   return value.split(",").filter(Boolean);
+}
+
+function parsePerPage(raw: string | null): PerPage {
+  if (raw === "all") return "all";
+  const n = Number(raw);
+  return n === 50 || n === 100 ? n : 25;
 }
 
 export function parseFiltersFromSearchParams(
@@ -61,6 +74,7 @@ export function parseFiltersFromSearchParams(
       : 1,
     sources: readMany(searchParams, "sources"),
     page: Number.isFinite(pageRaw) ? Math.max(1, Math.trunc(pageRaw)) : 1,
+    perPage: parsePerPage(readOne(searchParams, "per_page")),
   };
 }
 
@@ -75,6 +89,7 @@ export function filtersToSearchString(filters: LeadFilters): string {
     params.set("min_open_jobs", String(filters.minOpenJobs));
   if (filters.sources.length > 0) params.set("sources", filters.sources.join(","));
   if (filters.page > 1) params.set("page", String(filters.page));
+  if (filters.perPage !== 25) params.set("per_page", String(filters.perPage));
   const s = params.toString();
   return s ? `?${s}` : "";
 }

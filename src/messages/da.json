@@ -57,6 +57,13 @@
       "website": "Hjemmeside",
       "status": "Status"
     },
+    "toolbar": {
+      "count": "{count} virksomheder",
+      "pageSize": "Sidestørrelse",
+      "perPageN": "{n} pr. side",
+      "perPageAll": "Alle",
+      "export": "Eksportér CSV"
+    },
     "filters": {
       "title": "Filtre",
       "search": "Søg…",

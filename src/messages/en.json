@@ -57,6 +57,13 @@
       "website": "Website",
       "status": "Status"
     },
+    "toolbar": {
+      "count": "{count} companies",
+      "pageSize": "Page size",
+      "perPageN": "{n} per page",
+      "perPageAll": "All",
+      "export": "Export CSV"
+    },
     "filters": {
       "title": "Filters",
       "search": "Search…",
