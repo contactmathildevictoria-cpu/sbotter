@@ -41,6 +41,9 @@
     "columns": {
       "name": "Virksomhed",
       "contact": "Kontakt",
+      "phone": "Telefon",
+      "email": "Email",
+      "contactPerson": "Kontaktperson",
       "location": "Lokation",
       "industry": "Branche",
       "openJobs": "Åbne job",
