@@ -147,6 +147,9 @@ export async function lookupByName(
 export type EnrichResult = {
   status: CvrEnrichmentStatus;
   quotaExceeded: boolean;
+  // Why a row ended up 'failed' (quota | network_error | invalid_request |
+  // db_error), so batch callers can report the actual cause. null otherwise.
+  reason: string | null;
 };
 
 /**
@@ -202,18 +205,27 @@ export async function enrichCompanyFromCvr(
           ...(foundViaName ? { cvr: String(result.cvrNumber) } : {}),
         })
         .eq("id", companyId);
-      return { status: "enriched", quotaExceeded: false };
+      return { status: "enriched", quotaExceeded: false, reason: null };
     }
 
     // not_found / name-mismatch → no_match (definitive). Everything else
     // (quota, network, invalid) → failed (retryable).
     const status: CvrEnrichmentStatus =
       outcome === "not_found" ? "no_match" : "failed";
+    if (status === "failed") {
+      console.warn(
+        `[cvr] ${companyName} (${companyId}) failed — reason: ${outcome}`,
+      );
+    }
     await supabase
       .from("companies")
       .update({ cvr_enrichment_status: status })
       .eq("id", companyId);
-    return { status, quotaExceeded: outcome === "quota" };
+    return {
+      status,
+      quotaExceeded: outcome === "quota",
+      reason: status === "failed" ? outcome : null,
+    };
   } catch (err) {
     console.error(`[cvr] enrichment failed for company ${companyId}:`, err);
     try {
@@ -224,7 +236,7 @@ export async function enrichCompanyFromCvr(
     } catch {
       // swallow — we already logged the original error
     }
-    return { status: "failed", quotaExceeded: false };
+    return { status: "failed", quotaExceeded: false, reason: "db_error" };
   }
 }
 
@@ -237,6 +249,9 @@ export type BatchEnrichSummary = {
   skipped: number;
   remaining: number;
   stoppedOnQuota: boolean;
+  // Tally of why failures happened, e.g. { quota: 1 } or { invalid_request: 2 }.
+  // Lets the UI explain "0 enriched, N failed" without server-log access.
+  failureReasons: Record<string, number>;
 };
 
 /**
@@ -264,18 +279,23 @@ export async function enrichPendingCompanies(): Promise<BatchEnrichSummary> {
   let failed = 0;
   let skipped = 0;
   let stoppedOnQuota = false;
+  const failureReasons: Record<string, number> = {};
   const total = companies?.length ?? 0;
 
   for (let i = 0; i < total; i++) {
     const c = companies![i];
-    const { status, quotaExceeded } = await enrichCompanyFromCvr(
+    const { status, quotaExceeded, reason } = await enrichCompanyFromCvr(
       c.id,
       c.cvr,
       c.name,
     );
     if (status === "enriched") enriched++;
     else if (status === "no_match") skipped++;
-    else failed++;
+    else {
+      failed++;
+      const key = reason ?? "unknown";
+      failureReasons[key] = (failureReasons[key] ?? 0) + 1;
+    }
 
     console.log(
       `[cvr] batch ${i + 1}/${total} — ${c.name} (${c.id}) → ${status}`,
@@ -301,6 +321,7 @@ export async function enrichPendingCompanies(): Promise<BatchEnrichSummary> {
     skipped,
     remaining: remaining ?? 0,
     stoppedOnQuota,
+    failureReasons,
   };
   console.log("[cvr] batch summary:", JSON.stringify(summary));
   return summary;

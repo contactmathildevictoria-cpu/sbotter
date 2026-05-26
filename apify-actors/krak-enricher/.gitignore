@@ -5,3 +5,4 @@ apify_storage
 crawlee_storage
 *.log
 .DS_Store
+recon.mjs

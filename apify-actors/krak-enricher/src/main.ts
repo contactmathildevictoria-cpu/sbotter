@@ -35,14 +35,23 @@ if (mode === "fixture") {
     throw new Error(`Too many companies: ${companies.length} (max ${MAX_COMPANIES}).`);
   }
 
-  // Krak.dk blocks plain HTTP with 403, so we render with a real browser. One
-  // company at a time (maxConcurrency 1) with a 2s pause between each (handled in
-  // the handler) to avoid being blocked. See src/routes.ts.
+  // Krak.dk puts its company search behind Cloudflare (Turnstile managed
+  // challenge) — plain/datacenter requests get a 403 "Just a moment…" page that
+  // never clears. Passing it reliably needs a real browser + realistic
+  // fingerprints + a Danish RESIDENTIAL proxy. We run one company at a time
+  // (maxConcurrency 1) with a 2s pause between each (in the handler). The handler
+  // detects an unsolved challenge and records a skip rather than scraping junk.
+  const proxyConfiguration = await Actor.createProxyConfiguration({
+    groups: ["RESIDENTIAL"],
+    countryCode: "DK",
+  });
   const crawler = new PlaywrightCrawler({
     headless: true,
+    proxyConfiguration,
+    browserPoolOptions: { useFingerprints: true },
     maxConcurrency: 1,
-    navigationTimeoutSecs: 60,
-    requestHandlerTimeoutSecs: 120,
+    navigationTimeoutSecs: 90,
+    requestHandlerTimeoutSecs: 180,
     requestHandler: createKrakLookupHandler(),
   });
 
@@ -50,11 +59,14 @@ if (mode === "fixture") {
   await crawler.run(lookupStartRequests(companies));
 }
 
-// Ship the per-company results to the Sbotter Krak webhook. URL/secret come from
-// the run input first (Sbotter passes them when starting the run), then fall back
-// to env vars — identical signing to the job-scraping Actors.
-const webhookUrl = input.webhookUrl || process.env.SBOTTER_WEBHOOK_URL;
-const webhookSecret = input.webhookSecret || process.env.SBOTTER_WEBHOOK_SECRET;
+// Ship the per-company results to the Sbotter Krak webhook. The actor-level env
+// vars take precedence (set SBOTTER_WEBHOOK_URL to the production URL on the
+// Apify actor — that's the source of truth and survives a misconfigured caller),
+// then fall back to the run input (used for local `apify run` testing). This
+// avoids the failure mode where Sbotter's NEXT_PUBLIC_APP_URL defaults to
+// http://localhost:3000 and the actor would otherwise POST results into the void.
+const webhookUrl = process.env.SBOTTER_WEBHOOK_URL || input.webhookUrl;
+const webhookSecret = process.env.SBOTTER_WEBHOOK_SECRET || input.webhookSecret;
 
 if (webhookUrl && webhookSecret) {
   const dataset = await Dataset.open();
