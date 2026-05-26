@@ -19,6 +19,49 @@ function telHref(phone: string): string {
   return trimmed.startsWith("+") ? trimmed : `+45${trimmed}`;
 }
 
+// `website` may be stored as a bare domain; ensure links have a scheme.
+function websiteHref(url: string): string {
+  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
+
+// Bare hostname for a compact, readable website link.
+function displayHost(url: string): string {
+  try {
+    return new URL(websiteHref(url)).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+// Colored dot per enrichment status, for the debug Status column.
+function statusDotClass(status: string): string {
+  switch (status) {
+    case "enriched":
+      return "bg-green-500";
+    case "failed":
+      return "bg-red-500";
+    case "no_match":
+      return "bg-amber-500";
+    case "queued":
+      return "bg-blue-500";
+    default: // pending, skipped
+      return "bg-muted-foreground/50";
+  }
+}
+
+// One pipeline status row (e.g. "CVR  enriched") with a status-colored dot.
+function StatusLine({ label, status }: { label: string; status: string }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span
+        className={`inline-block size-1.5 shrink-0 rounded-full ${statusDotClass(status)}`}
+      />
+      <span className="text-muted-foreground w-8 shrink-0">{label}</span>
+      <span>{status}</span>
+    </div>
+  );
+}
+
 export async function CompaniesTable({ page }: { page: CompaniesPage }) {
   const t = await getTranslations("Leads.columns");
   const tEnrich = await getTranslations("Leads.enrich");
@@ -31,10 +74,11 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
           <TableRow>
             <TableHead>{t("name")}</TableHead>
             <TableHead>{t("contact")}</TableHead>
+            <TableHead>{t("status")}</TableHead>
             <TableHead>{t("location")}</TableHead>
             <TableHead className="text-right">{t("openJobs")}</TableHead>
             <TableHead>{t("lastSeen")}</TableHead>
-            <TableHead className="w-8" />
+            <TableHead>{t("website")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -134,6 +178,16 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                   </div>
                 </TableCell>
 
+                <TableCell className="text-xs">
+                  <div className="space-y-0.5">
+                    <StatusLine label="CVR" status={row.cvr_enrichment_status} />
+                    <StatusLine
+                      label="Krak"
+                      status={row.krak_enrichment_status}
+                    />
+                  </div>
+                </TableCell>
+
                 <TableCell className="text-muted-foreground text-sm">
                   {[row.location_city, row.country].filter(Boolean).join(", ") ||
                     "—"}
@@ -146,18 +200,20 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                 <TableCell className="text-muted-foreground text-sm">
                   {formatRelativeDate(row.last_seen_at)}
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-sm">
                   {row.website ? (
                     <a
-                      href={row.website}
+                      href={websiteHref(row.website)}
                       target="_blank"
                       rel="noreferrer"
-                      aria-label="Open website"
-                      className="text-muted-foreground hover:text-foreground inline-flex"
+                      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 underline-offset-4 hover:underline"
                     >
-                      <ArrowUpRight className="size-4" />
+                      {displayHost(row.website)}
+                      <ArrowUpRight className="size-3.5 shrink-0" />
                     </a>
-                  ) : null}
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
                 </TableCell>
               </TableRow>
             );

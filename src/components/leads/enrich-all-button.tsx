@@ -12,6 +12,8 @@ type BatchSummary = {
   failed: number;
   skipped: number;
   remaining: number;
+  stoppedOnQuota?: boolean;
+  failureReasons?: Record<string, number>;
 };
 
 export function EnrichAllButton() {
@@ -33,6 +35,15 @@ export function EnrichAllButton() {
           remaining: s.remaining,
         }),
       );
+      // Surface WHY things failed (otherwise invisible without server logs).
+      if (s.stoppedOnQuota) {
+        toast.warning(t("enrichQuota"));
+      } else if (s.failed > 0 && s.failureReasons) {
+        const detail = Object.entries(s.failureReasons)
+          .map(([reason, n]) => `${reason}: ${n}`)
+          .join(", ");
+        if (detail) toast.error(t("enrichFailureDetail", { detail }));
+      }
       startTransition(() => router.refresh());
     } catch {
       toast.error(t("enrichAllError"));
