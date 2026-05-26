@@ -50,7 +50,9 @@
       "company": "Company",
       "category": "Category",
       "postedAt": "Posted",
-      "link": "Link"
+      "link": "Link",
+      "website": "Website",
+      "status": "Status"
     },
     "filters": {
       "title": "Filters",
@@ -88,7 +90,9 @@
       "enrichAll": "Enrich all",
       "enrichAllRunning": "Enriching…",
       "enrichAllDone": "Enriched {enriched}, {failed} failed, {remaining} remaining",
-      "enrichAllError": "Enrichment failed. Try again."
+      "enrichAllError": "Enrichment failed. Try again.",
+      "enrichQuota": "CVR daily quota exceeded (50/day). Set CVRAPI_TOKEN to remove the limit.",
+      "enrichFailureDetail": "Failure reasons: {detail}"
     },
     "krak": {
       "findPhones": "Find phone numbers",

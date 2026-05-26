@@ -50,7 +50,9 @@
       "company": "Virksomhed",
       "category": "Kategori",
       "postedAt": "Slået op",
-      "link": "Link"
+      "link": "Link",
+      "website": "Hjemmeside",
+      "status": "Status"
     },
     "filters": {
       "title": "Filtre",
@@ -88,7 +90,9 @@
       "enrichAll": "Berig alle",
       "enrichAllRunning": "Beriger…",
       "enrichAllDone": "Beriget {enriched}, {failed} fejlede, {remaining} venter stadig",
-      "enrichAllError": "Kunne ikke berige. Prøv igen."
+      "enrichAllError": "Kunne ikke berige. Prøv igen.",
+      "enrichQuota": "CVR-kvoten er opbrugt (50/dag). Sæt CVRAPI_TOKEN for at fjerne grænsen.",
+      "enrichFailureDetail": "Fejlårsager: {detail}"
     },
     "krak": {
       "findPhones": "Find telefonnumre",
