@@ -27,6 +27,13 @@ export type KrakEnrichmentStatus =
   | "no_match"
   | "skipped";
 
+export type WebsiteScrapeStatus =
+  | "pending"
+  | "scraped"
+  | "failed"
+  | "no_website"
+  | "skipped";
+
 export type Database = {
   public: {
     Tables: {
@@ -124,6 +131,12 @@ export type Database = {
           krak_url: string | null;
           krak_enriched_at: string | null;
           krak_enrichment_status: KrakEnrichmentStatus;
+          website_phone: string | null;
+          website_email: string | null;
+          website_contact_person: string | null;
+          website_contact_title: string | null;
+          website_scraped_at: string | null;
+          website_scrape_status: WebsiteScrapeStatus;
           created_at: string;
           updated_at: string;
         };
@@ -160,6 +173,12 @@ export type Database = {
           krak_url?: string | null;
           krak_enriched_at?: string | null;
           krak_enrichment_status?: KrakEnrichmentStatus;
+          website_phone?: string | null;
+          website_email?: string | null;
+          website_contact_person?: string | null;
+          website_contact_title?: string | null;
+          website_scraped_at?: string | null;
+          website_scrape_status?: WebsiteScrapeStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -196,6 +215,12 @@ export type Database = {
           krak_url?: string | null;
           krak_enriched_at?: string | null;
           krak_enrichment_status?: KrakEnrichmentStatus;
+          website_phone?: string | null;
+          website_email?: string | null;
+          website_contact_person?: string | null;
+          website_contact_title?: string | null;
+          website_scraped_at?: string | null;
+          website_scrape_status?: WebsiteScrapeStatus;
           created_at?: string;
           updated_at?: string;
         };

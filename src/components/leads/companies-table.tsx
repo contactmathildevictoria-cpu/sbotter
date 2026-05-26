@@ -37,6 +37,7 @@ function displayHost(url: string): string {
 function statusDotClass(status: string): string {
   switch (status) {
     case "enriched":
+    case "scraped":
       return "bg-green-500";
     case "failed":
       return "bg-red-500";
@@ -59,6 +60,15 @@ function StatusLine({ label, status }: { label: string; status: string }) {
       <span className="text-muted-foreground w-8 shrink-0">{label}</span>
       <span>{status}</span>
     </div>
+  );
+}
+
+// Tiny "where did this value come from" tag, shown next to a fallback value.
+function SourceTag({ label, title }: { label: string; title: string }) {
+  return (
+    <span title={title} className="text-muted-foreground text-[10px] uppercase">
+      {label}
+    </span>
   );
 }
 
@@ -85,22 +95,39 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
         </TableHeader>
         <TableBody>
           {page.rows.map((row) => {
-            // Per-field fallback cascade: CVR is preferred, then Krak (CVR
-            // columns are never overwritten, so a fallback only shows when the
-            // CVR field is empty). A website_* stage (PR #6, not on this branch)
-            // would slot in between CVR and Krak once those columns exist.
-            const phone = row.phone ?? row.krak_phone;
-            const email = row.email; // only CVR carries an email on this branch
+            // Per-field cascade: CVR → website (scraper) → Krak. CVR columns are
+            // never overwritten, so a fallback only surfaces when the CVR field
+            // is empty. A small tag marks which fallback a value came from.
+            const phone = row.phone ?? row.website_phone ?? row.krak_phone;
+            const email = row.email ?? row.website_email;
             const contactName =
-              row.contact_person_name ?? row.krak_contact_person;
-            // CVR has no title column; Krak does. Only show the Krak title when
-            // the name itself came from Krak (i.e. CVR had no contact person).
+              row.contact_person_name ??
+              row.website_contact_person ??
+              row.krak_contact_person;
+            // CVR has no title; website + Krak do — use the title from whichever
+            // source the name came from.
             const contactTitle = row.contact_person_name
               ? null
-              : row.krak_contact_title;
-            const phoneFromKrak = !row.phone && Boolean(row.krak_phone);
-            const nameFromKrak =
-              !row.contact_person_name && Boolean(row.krak_contact_person);
+              : row.website_contact_person
+                ? row.website_contact_title
+                : row.krak_contact_person
+                  ? row.krak_contact_title
+                  : null;
+            const phoneSource: "web" | "krak" | null = row.phone
+              ? null
+              : row.website_phone
+                ? "web"
+                : row.krak_phone
+                  ? "krak"
+                  : null;
+            const emailFromWeb = !row.email && Boolean(row.website_email);
+            const nameSource: "web" | "krak" | null = row.contact_person_name
+              ? null
+              : row.website_contact_person
+                ? "web"
+                : row.krak_contact_person
+                  ? "krak"
+                  : null;
             const hasAnyContact = Boolean(contactName || phone || email);
             return (
               <TableRow key={row.id}>
@@ -137,13 +164,13 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                     >
                       <Phone className="text-muted-foreground size-3.5 shrink-0" />
                       {phone}
-                      {phoneFromKrak ? (
-                        <span
+                      {phoneSource === "web" ? (
+                        <SourceTag label="Web" title={tEnrich("fromWebsite")} />
+                      ) : phoneSource === "krak" ? (
+                        <SourceTag
+                          label={tKrak("source")}
                           title={tKrak("sourceKrak")}
-                          className="text-muted-foreground text-[10px] uppercase"
-                        >
-                          {tKrak("source")}
-                        </span>
+                        />
                       ) : null}
                     </a>
                   ) : (
@@ -160,6 +187,9 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                     >
                       <Mail className="text-muted-foreground size-3.5 shrink-0" />
                       {email}
+                      {emailFromWeb ? (
+                        <SourceTag label="Web" title={tEnrich("fromWebsite")} />
+                      ) : null}
                     </a>
                   ) : (
                     <span className="text-muted-foreground">—</span>
@@ -178,13 +208,13 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                           · {contactTitle}
                         </span>
                       ) : null}
-                      {nameFromKrak ? (
-                        <span
+                      {nameSource === "web" ? (
+                        <SourceTag label="Web" title={tEnrich("fromWebsite")} />
+                      ) : nameSource === "krak" ? (
+                        <SourceTag
+                          label={tKrak("source")}
                           title={tKrak("sourceKrak")}
-                          className="text-muted-foreground text-[10px] uppercase"
-                        >
-                          {tKrak("source")}
-                        </span>
+                        />
                       ) : null}
                     </div>
                   ) : !hasAnyContact ? (
@@ -200,6 +230,10 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                 <TableCell className="text-xs">
                   <div className="space-y-0.5">
                     <StatusLine label="CVR" status={row.cvr_enrichment_status} />
+                    <StatusLine
+                      label="Web"
+                      status={row.website_scrape_status}
+                    />
                     <StatusLine
                       label="Krak"
                       status={row.krak_enrichment_status}
