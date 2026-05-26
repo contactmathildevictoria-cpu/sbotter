@@ -95,7 +95,10 @@
       "enrichAllDone": "Beriget {enriched}, {failed} fejlede, {remaining} venter stadig",
       "enrichAllError": "Kunne ikke berige. Prøv igen.",
       "enrichQuota": "CVR-kvoten er opbrugt (50/dag). Sæt CVRAPI_TOKEN for at fjerne grænsen.",
-      "enrichFailureDetail": "Fejlårsager: {detail}"
+      "enrichFailureDetail": "Fejlårsager: {detail}",
+      "fromWebsite": "Fra hjemmeside",
+      "enrichAllDiscovered": "Fandt {discovered} hjemmesider",
+      "enrichAllWebsite": "Skrabede {scraped} hjemmesider for kontaktinfo"
     },
     "krak": {
       "findPhones": "Find telefonnumre",

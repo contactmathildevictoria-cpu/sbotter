@@ -95,7 +95,10 @@
       "enrichAllDone": "Enriched {enriched}, {failed} failed, {remaining} remaining",
       "enrichAllError": "Enrichment failed. Try again.",
       "enrichQuota": "CVR daily quota exceeded (50/day). Set CVRAPI_TOKEN to remove the limit.",
-      "enrichFailureDetail": "Failure reasons: {detail}"
+      "enrichFailureDetail": "Failure reasons: {detail}",
+      "fromWebsite": "From website",
+      "enrichAllDiscovered": "Found {discovered} websites",
+      "enrichAllWebsite": "Scraped {scraped} websites for contact info"
     },
     "krak": {
       "findPhones": "Find phone numbers",

@@ -14,6 +14,8 @@ type BatchSummary = {
   remaining: number;
   stoppedOnQuota?: boolean;
   failureReasons?: Record<string, number>;
+  discovery?: { processed: number; discovered: number };
+  website?: { processed: number; scraped: number };
 };
 
 export function EnrichAllButton() {
@@ -43,6 +45,15 @@ export function EnrichAllButton() {
           .map(([reason, n]) => `${reason}: ${n}`)
           .join(", ");
         if (detail) toast.error(t("enrichFailureDetail", { detail }));
+      }
+      // Website passes run regardless of CVR — surface their results too.
+      if (s.discovery && s.discovery.discovered > 0) {
+        toast.success(
+          t("enrichAllDiscovered", { discovered: s.discovery.discovered }),
+        );
+      }
+      if (s.website && s.website.processed > 0) {
+        toast.success(t("enrichAllWebsite", { scraped: s.website.scraped }));
       }
       startTransition(() => router.refresh());
     } catch {
