@@ -1,0 +1,37 @@
+{
+  "title": "Input — Sbotter Indeed (DK) scraper",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Run mode",
+      "type": "string",
+      "description": "fixture = push the bundled sample-items.json (for local testing). scrape = pull live ads from dk.indeed.com.",
+      "editor": "select",
+      "enum": ["fixture", "scrape"],
+      "default": "fixture"
+    },
+    "searchString": {
+      "title": "Search string",
+      "type": "string",
+      "description": "Free-text query (q=). Empty = all jobs.",
+      "editor": "textfield",
+      "default": ""
+    },
+    "location": {
+      "title": "Location",
+      "type": "string",
+      "description": "Indeed location (l=). Defaults to all of Denmark.",
+      "editor": "textfield",
+      "default": "Danmark"
+    },
+    "maxItems": {
+      "title": "Max items per run",
+      "type": "integer",
+      "description": "Soft cap. Keep modest — Indeed is aggressive about bot detection.",
+      "default": 1000,
+      "minimum": 1,
+      "maximum": 5000
+    }
+  }
+}

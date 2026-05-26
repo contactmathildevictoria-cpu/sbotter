@@ -4,8 +4,9 @@ import { z } from "zod";
 import { env } from "@/lib/env";
 import {
   fetchApifyDatasetItems,
-  processJobnetItems,
+  processIngestItems,
 } from "@/lib/ingest/apify";
+import { SOURCE_IDS, type SourceId } from "@/lib/ingest/normalize";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -68,6 +69,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  // Which source is this batch from? Each Actor appends ?source=<id> to its
+  // webhook URL. The param lives outside the signed body, so it never affects
+  // the HMAC. Validate against the allowlist (after auth, so unauthorized
+  // callers can't probe valid source ids). Defaults to jobnet for back-compat.
+  const source = new URL(request.url).searchParams.get("source") ?? "jobnet";
+  if (!SOURCE_IDS.has(source as SourceId)) {
+    return NextResponse.json({ error: "unknown_source" }, { status: 400 });
+  }
+
   let payload: z.infer<typeof payloadSchema>;
   try {
     payload = payloadSchema.parse(JSON.parse(rawBody));
@@ -104,10 +114,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { enrichmentCandidates, ...result } = await processJobnetItems(items, {
-      apifyRunId: payload.resource?.id,
-      apifyActorId: payload.resource?.actId,
-    });
+    const { enrichmentCandidates, ...result } = await processIngestItems(
+      items,
+      source as SourceId,
+      {
+        apifyRunId: payload.resource?.id,
+        apifyActorId: payload.resource?.actId,
+      },
+    );
 
     // CVR enrichment is NOT done here: fire-and-forget promises get killed when
     // a serverless response is sent. New companies are left as 'pending' and the

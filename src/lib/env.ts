@@ -30,6 +30,17 @@ export const env = {
   get apifyToken() {
     return optional(process.env.APIFY_TOKEN);
   },
+  get apifyTokenRequired() {
+    // Same token as apifyToken, but required: starting an Actor run via the Apify
+    // API (e.g. the Krak enricher) can't work without it. Stays a separate getter
+    // so the app boots without APIFY_TOKEN when no run is being started.
+    return required("APIFY_TOKEN", process.env.APIFY_TOKEN);
+  },
+  get krakEnricherActorId() {
+    // Apify Actor id (user~actor-name or the 17-char id) for the Krak.dk enricher.
+    // Required to start a "Find phone numbers" run; optional so the app boots.
+    return optional(process.env.KRAK_ENRICHER_ACTOR_ID);
+  },
   get apifyWebhookSecret() {
     return required("APIFY_WEBHOOK_SECRET", process.env.APIFY_WEBHOOK_SECRET);
   },

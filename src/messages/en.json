@@ -90,6 +90,15 @@
       "enrichAllDone": "Enriched {enriched}, {failed} failed, {remaining} remaining",
       "enrichAllError": "Enrichment failed. Try again."
     },
+    "krak": {
+      "findPhones": "Find phone numbers",
+      "findPhonesRunning": "Starting…",
+      "findPhonesStarted": "Started lookup for {started} companies — results arrive shortly",
+      "findPhonesNone": "No companies are missing a phone number",
+      "findPhonesError": "Couldn't start lookup. Try again.",
+      "source": "Krak",
+      "sourceKrak": "From Krak.dk"
+    },
     "pagination": {
       "next": "Next",
       "prev": "Previous",

@@ -19,6 +19,14 @@ export type CvrEnrichmentStatus =
   | "no_match"
   | "skipped";
 
+export type KrakEnrichmentStatus =
+  | "pending"
+  | "queued"
+  | "enriched"
+  | "failed"
+  | "no_match"
+  | "skipped";
+
 export type Database = {
   public: {
     Tables: {
@@ -110,6 +118,12 @@ export type Database = {
           is_bankrupt: boolean;
           cvr_enriched_at: string | null;
           cvr_enrichment_status: CvrEnrichmentStatus;
+          krak_phone: string | null;
+          krak_contact_person: string | null;
+          krak_contact_title: string | null;
+          krak_url: string | null;
+          krak_enriched_at: string | null;
+          krak_enrichment_status: KrakEnrichmentStatus;
           created_at: string;
           updated_at: string;
         };
@@ -140,6 +154,12 @@ export type Database = {
           is_bankrupt?: boolean;
           cvr_enriched_at?: string | null;
           cvr_enrichment_status?: CvrEnrichmentStatus;
+          krak_phone?: string | null;
+          krak_contact_person?: string | null;
+          krak_contact_title?: string | null;
+          krak_url?: string | null;
+          krak_enriched_at?: string | null;
+          krak_enrichment_status?: KrakEnrichmentStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -170,6 +190,12 @@ export type Database = {
           is_bankrupt?: boolean;
           cvr_enriched_at?: string | null;
           cvr_enrichment_status?: CvrEnrichmentStatus;
+          krak_phone?: string | null;
+          krak_contact_person?: string | null;
+          krak_contact_title?: string | null;
+          krak_url?: string | null;
+          krak_enriched_at?: string | null;
+          krak_enrichment_status?: KrakEnrichmentStatus;
           created_at?: string;
           updated_at?: string;
         };

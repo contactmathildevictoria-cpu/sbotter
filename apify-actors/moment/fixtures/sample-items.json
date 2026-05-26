@@ -1,0 +1,36 @@
+[
+  {
+    "externalId": "thehub-product-designer-glowapp",
+    "title": "Product Designer",
+    "description": "Shape the product experience at an early-stage climate-tech startup.",
+    "category": null,
+    "url": "https://thehub.io/jobs/product-designer-glowapp",
+    "postedAt": "2026-05-21T00:00:00Z",
+    "expiresAt": null,
+    "employmentType": "fuldtid",
+    "location": { "city": "København", "region": null, "country": "DK" },
+    "company": {
+      "name": "GlowApp",
+      "cvr": null,
+      "website": "https://glowapp.io",
+      "description": null
+    }
+  },
+  {
+    "externalId": "thehub-founding-engineer-luma",
+    "title": "Founding Engineer",
+    "description": "Join as employee #4 and own the backend of our B2B SaaS.",
+    "category": null,
+    "url": "https://thehub.io/jobs/founding-engineer-luma",
+    "postedAt": "2026-05-19T00:00:00Z",
+    "expiresAt": null,
+    "employmentType": "fuldtid",
+    "location": { "city": "København", "region": null, "country": "DK" },
+    "company": {
+      "name": "Luma",
+      "cvr": null,
+      "website": "https://luma.dk",
+      "description": null
+    }
+  }
+]

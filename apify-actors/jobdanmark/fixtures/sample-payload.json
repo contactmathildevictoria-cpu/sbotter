@@ -1,0 +1,28 @@
+{
+  "eventType": "ACTOR.RUN.SUCCEEDED",
+  "resource": {
+    "id": "local-test-run",
+    "actId": "sbotter-jobdanmark"
+  },
+  "items": [
+    {
+      "externalId": "jd-44021",
+      "title": "Account Manager B2B",
+      "description": "Opsøgende salg til danske SMV-kunder.",
+      "category": null,
+      "url": "https://www.jobdanmark.dk/job/44021",
+      "postedAt": "2026-05-21T00:00:00Z",
+      "expiresAt": "2026-06-15T00:00:00Z",
+      "employmentType": "fuldtid",
+      "contactEmail": "job@bygmestrene.dk",
+      "contactPhone": "70203040",
+      "location": { "city": "Odense", "region": "Syddanmark", "country": "DK" },
+      "company": {
+        "name": "Bygmestrene A/S",
+        "cvr": null,
+        "website": "https://bygmestrene.dk",
+        "description": null
+      }
+    }
+  ]
+}

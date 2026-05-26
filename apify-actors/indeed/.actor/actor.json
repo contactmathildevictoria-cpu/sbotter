@@ -1,0 +1,17 @@
+{
+  "actorSpecification": 1,
+  "name": "sbotter-indeed",
+  "title": "Sbotter — Indeed (DK) scraper",
+  "description": "Scrapes job postings from dk.indeed.com and ships them to Sbotter's ingest webhook (?source=indeed).",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "dockerfile": "./Dockerfile",
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "title": "Normalized job postings",
+      "views": {}
+    }
+  }
+}
