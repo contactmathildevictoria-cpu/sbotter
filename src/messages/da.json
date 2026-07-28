@@ -120,6 +120,57 @@
       "next": "Næste",
       "prev": "Forrige",
       "page": "Side {page}"
+    },
+    "tabToday": "Dagens liste",
+    "today": {
+      "count": "{count} leads på boardet",
+      "refresh": "Hent flere leads",
+      "refreshing": "Henter…",
+      "refreshDone": "{fresh} nye, {recycled} fra skraldespanden",
+      "refreshNone": "Ingen nye leads lige nu — boardet er fyldt op",
+      "emptyTitle": "Ingen leads endnu",
+      "emptyBody": "Tryk “Hent flere leads” for at fylde dagens liste op."
+    },
+    "board": {
+      "new": "Nye",
+      "contacted": "Kontaktet",
+      "no_pickup": "Opfølgning",
+      "meeting": "Møde",
+      "closed": "Vundet/Tabt",
+      "emptyColumn": "Ingen leads her"
+    },
+    "status": {
+      "new": "Ny",
+      "contacted": "Kontaktet",
+      "no_pickup": "Intet svar",
+      "meeting": "Møde",
+      "won": "Vundet",
+      "lost": "Tabt"
+    },
+    "card": {
+      "rating": "Vurdering",
+      "ratingValue": "{rating}/10",
+      "note": "Note",
+      "notePlaceholder": "Note…",
+      "saving": "Gemmer…",
+      "saved": "Gemt",
+      "saveError": "Kunne ikke gemme",
+      "freshToday": "Ny i dag",
+      "followUpAt": "Følges op {date}",
+      "openJobs": "{count} job",
+      "changeStatus": "Skift status",
+      "noContact": "Ingen kontaktperson",
+      "noPhone": "Intet telefonnummer"
+    },
+    "errors": {
+      "UNAUTHENTICATED": "Du er ikke logget ind",
+      "INVALID_INPUT": "Ugyldigt input",
+      "NOT_FOUND": "Leadet blev ikke fundet",
+      "UPDATE_FAILED": "Kunne ikke gemme ændringen",
+      "INSERT_FAILED": "Kunne ikke gemme",
+      "DELETE_FAILED": "Kunne ikke slette",
+      "ALREADY_EXCLUDED": "Firmaet er allerede på listen",
+      "GENERATE_FAILED": "Kunne ikke hente leads"
     }
   },
   "NotFound": {
@@ -134,6 +185,39 @@
     "plan": "Abonnement",
     "upgrade": "Opgrader",
     "upgradeComingSoon": "Snart tilgængelig",
-    "signOut": "Log ud"
+    "signOut": "Log ud",
+    "list": {
+      "title": "Dagens liste",
+      "description": "Styrer hvor mange leads motoren lægger på dit board hver morgen.",
+      "dailyTarget": "Leads pr. dag",
+      "dailyTargetHint": "Boardet fyldes op til så mange ubehandlede leads.",
+      "trashMax": "Maks fra skraldespanden",
+      "trashMaxHint": "Samlet loft pr. kørsel for genbrugte og nødfyldte leads.",
+      "followUpDays": "Opfølgning efter (dage)",
+      "followUpDaysHint": "Et “Intet svar”-lead dukker op igen efter så mange dage.",
+      "save": "Gem",
+      "saving": "Gemmer…",
+      "saved": "Indstillinger gemt"
+    },
+    "excluded": {
+      "title": "Egne kunder",
+      "description": "Firmaer her kommer aldrig med på dagens liste.",
+      "placeholder": "Firmanavn",
+      "add": "Tilføj",
+      "empty": "Ingen firmaer valgt fra endnu.",
+      "remove": "Fjern {name}",
+      "matchHint": "Matcher også navne der starter med “{slug}”.",
+      "note": "Leads du allerede har fået, bliver ikke fjernet fra boardet — smid dem i skraldespanden."
+    },
+    "industries": {
+      "title": "Fravalgte brancher",
+      "description": "Brancher du ikke sælger til. Firmaer uden branchekode filtreres ikke fra.",
+      "placeholder": "Søg branche…",
+      "search": "Vælg branche",
+      "empty": "Ingen brancher fravalgt endnu.",
+      "noResults": "Ingen brancher fundet",
+      "remove": "Fjern {name}",
+      "presets": "Hurtigvalg"
+    }
   }
 }

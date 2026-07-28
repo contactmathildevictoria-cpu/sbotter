@@ -120,6 +120,57 @@
       "next": "Next",
       "prev": "Previous",
       "page": "Page {page}"
+    },
+    "tabToday": "Today's list",
+    "today": {
+      "count": "{count} leads on the board",
+      "refresh": "Get more leads",
+      "refreshing": "Fetching…",
+      "refreshDone": "{fresh} new, {recycled} from the trash",
+      "refreshNone": "No new leads right now — the board is full",
+      "emptyTitle": "No leads yet",
+      "emptyBody": "Press “Get more leads” to fill today's list."
+    },
+    "board": {
+      "new": "New",
+      "contacted": "Contacted",
+      "no_pickup": "Follow-up",
+      "meeting": "Meeting",
+      "closed": "Won/Lost",
+      "emptyColumn": "No leads here"
+    },
+    "status": {
+      "new": "New",
+      "contacted": "Contacted",
+      "no_pickup": "No pickup",
+      "meeting": "Meeting",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "card": {
+      "rating": "Rating",
+      "ratingValue": "{rating}/10",
+      "note": "Note",
+      "notePlaceholder": "Note…",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "saveError": "Could not save",
+      "freshToday": "New today",
+      "followUpAt": "Follow up {date}",
+      "openJobs": "{count} jobs",
+      "changeStatus": "Change status",
+      "noContact": "No contact person",
+      "noPhone": "No phone number"
+    },
+    "errors": {
+      "UNAUTHENTICATED": "You are not signed in",
+      "INVALID_INPUT": "Invalid input",
+      "NOT_FOUND": "Lead not found",
+      "UPDATE_FAILED": "Could not save the change",
+      "INSERT_FAILED": "Could not save",
+      "DELETE_FAILED": "Could not delete",
+      "ALREADY_EXCLUDED": "That company is already on the list",
+      "GENERATE_FAILED": "Could not fetch leads"
     }
   },
   "NotFound": {
@@ -134,6 +185,39 @@
     "plan": "Plan",
     "upgrade": "Upgrade",
     "upgradeComingSoon": "Coming soon",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "list": {
+      "title": "Daily list",
+      "description": "Controls how many leads the engine puts on your board each morning.",
+      "dailyTarget": "Leads per day",
+      "dailyTargetHint": "The board is topped up to this many unworked leads.",
+      "trashMax": "Max from the trash",
+      "trashMaxHint": "Total cap per run for recycled and backfilled leads.",
+      "followUpDays": "Follow up after (days)",
+      "followUpDaysHint": "A “no pickup” lead comes back after this many days.",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Settings saved"
+    },
+    "excluded": {
+      "title": "Your own customers",
+      "description": "Companies here never appear on the daily list.",
+      "placeholder": "Company name",
+      "add": "Add",
+      "empty": "No companies excluded yet.",
+      "remove": "Remove {name}",
+      "matchHint": "Also matches names starting with “{slug}”.",
+      "note": "Leads you already received stay on the board — trash them to remove."
+    },
+    "industries": {
+      "title": "Blocked industries",
+      "description": "Industries you don't sell to. Companies without an industry code are not filtered.",
+      "placeholder": "Search industry…",
+      "search": "Pick an industry",
+      "empty": "No industries blocked yet.",
+      "noResults": "No industries found",
+      "remove": "Remove {name}",
+      "presets": "Quick picks"
+    }
   }
 }
