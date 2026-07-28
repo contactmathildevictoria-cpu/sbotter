@@ -125,7 +125,12 @@ create policy "blocked_industries_rw_own" on public.blocked_industries
   using (auth.uid() = user_id) with check (auth.uid() = user_id);
 ```
 
-`name_normalized` genbruger `slugify()` fra `src/lib/ingest/normalize.ts`, så "Arla", "Arla Foods" og "arla foods a/s" matcher robust. Vikarbureauer løses via `blocked_industries` (CVR-branchekoderne for "vikarbureauer" ligger i 78200-serien).
+`name_normalized` genbruger `slugify()` fra `src/lib/ingest/normalize.ts` — præcis den transform der producerer `companies.slug` — så matchet er `slug = name_normalized` eller `slug like name_normalized || '-%'`. Bindestregen er bærende: "arla" skal ramme "arla-foods", men **ikke** "arlandia".
+
+**Som bygget, to afvigelser fra SQL'en ovenfor:**
+
+- `excluded_companies` har `unique (user_id, name_normalized)`, så `addExcludedCompany` er idempotent og kan returnere `ALREADY_EXCLUDED` i stedet for at hobe tavse dubletter op.
+- `blocked_industries` har `industry_code integer not null` og PK `(user_id, industry_code)` — ikke nullable kode med PK på label. En række uden kode kan ikke håndhæves: motoren filtrerer på `companies.cvr_industry_code`, så en label-kun-række ville være et tavst no-op uden feedback til brugeren. Branchegrupper (vikarbureauer = 781000 + 782000 + 783000) er i stedet flere rækker med samme label, jf. `INDUSTRY_PRESETS` i `src/lib/leads/industries.ts`.
 
 ### 1.4 Lukkede firmaer
 
@@ -140,12 +145,16 @@ alter table public.companies
 
 ## 2. Server-logik: den daglige liste-motor
 
-**Fil:** `src/lib/leads/daily-list.ts` (server-only, bruger service-klienten så den kan læse på tværs af brugere ved cron-kørsel).
+**Filer (som bygget):** motoren er delt i to.
+`src/lib/leads/daily-list-core.ts` er **ren** — ingen I/O, intet ur, ingen Supabase; datoen kommer ind som argument. Al prioritets- og filterlogik bor her og er dækket af `daily-list-core.test.ts`.
+`src/lib/leads/daily-list.ts` er den tynde I/O-wrapper (`server-only`, service-klienten, så cron kan køre på tværs af brugere).
 
 Funktion `generateDailyList(userId: string, date = today)`. Prioritetsrækkefølge — friskhed først, skraldespand kun som planlagt opfølgning eller nødfyld:
 
 1. **Hent præferencer:** `daily_target` (T), `trash_max` (M), `follow_up_days`.
-2. **Opfølgninger (genbrug):** rækker i `lead_assignments` hvor `user_id = X`, `in_trash = true`, `follow_up_at <= date`. Sortér ældste opfølgning først, tag maks `M`. Sæt `in_trash = false`, `status = 'new'`, `origin = 'recycled'`, `list_date = date`.
+
+   **Top-up (som bygget — afviger fra trin 3 nedenfor):** motoren fylder op til T **ubehandlede** leads (`status = 'new'` og ikke i skraldespanden), ikke "T nye hver dag". Har man arbejdet 5 af gårsdagens 50, skal der ikke ligge 95 på bordet i dag. `deficit = max(0, T − antal ubehandlede)`; er den 0, planlægges intet.
+2. **Opfølgninger (genbrug):** rækker i `lead_assignments` hvor `user_id = X`, `in_trash = true`, `follow_up_at <= date`. Sortér ældste opfølgning først, tag maks `M`. Sæt `in_trash = false`, `status = 'new'`, `origin = 'recycled'`, `list_date = date`, og nulstil `follow_up_at`.
 3. **Friske leads:** vælg `companies` der:
    - har mindst ét aktivt `job_posting` (`open_jobs_count >= 1`),
    - `is_bankrupt = false`,
@@ -153,11 +162,13 @@ Funktion `generateDailyList(userId: string, date = today)`. Prioritetsrækkeføl
    - **ikke** matcher `excluded_companies` (på `name_normalized`/`cvr`/`domain`),
    - **ikke** har `cvr_industry_code` i brugerens `blocked_industries`.
 
-   Sortér nyeste `last_seen_at` først. Tag `T − (antal genbrugte)` stykker. Indsæt med `origin = 'fresh'`.
-4. **Nødfyld (fallback):** hvis der stadig mangler op til T fordi skrabet var tyndt, tag ekstra fra skraldespanden (uanset `follow_up_at`), maks resten af T. `origin = 'fill'`.
-5. **Idempotens:** kører motoren to gange samme dag, må den ikke lave dubletter — tjek på `list_date` + eksisterende assignments.
+   Sortér nyeste `last_seen_at` først. Tag `deficit − (antal genbrugte)` stykker. Indsæt med `origin = 'fresh'`.
+4. **Nødfyld (fallback):** hvis der stadig mangler fordi skrabet var tyndt, tag ekstra fra skraldespanden (uanset `follow_up_at`). **Som bygget:** `M` er et *globalt* budget pr. kørsel — `genbrug + nødfyld ≤ M`. Ellers ville en tynd dag tømme hele skraldespanden ud på boardet, og indstillingen "max 10 fra skraldespanden" ville ikke betyde noget. `origin = 'fill'`.
+5. **Idempotens:** følger gratis af top-up-reglen — efter en vellykket kørsel er `deficit = 0`, så en ny kørsel samme dag planlægger ingenting. Der er derfor ingen `list_date`-bogføring. To ekstra lag bagved: `unique (user_id, company_id)` + `ignoreDuplicates` på insert, og compare-and-swap (`.eq("in_trash", true)`) på genbrug, så to samtidige kørsler hverken kan lave dubletter eller dobbelttælle.
 
-Returnér `{ ok: true, data: { fresh, recycled, fill, total } }`.
+**Datoer:** alle datoer beregnes i TS i `Europe/Copenhagen` (`todayInCopenhagen`, `addDaysISO`), aldrig med Postgres' `current_date`. Supabase kører UTC, så `current_date + 7` ville ramme en dag ved siden af om aftenen dansk tid.
+
+Returnerer `{ fresh, recycled, fill, total, unworkedBefore, deficit }` — talt fra hvad der faktisk landede i databasen, ikke fra planen.
 
 **Planlægning:** en scheduled task kører hver morgen (fx 06:00) og kalder motoren for hver aktiv bruger. Kan sættes op via en cron-route `src/app/api/cron/daily-list/route.ts` (samme mønster som den eksisterende `src/app/api/cron/enrich/route.ts`) beskyttet med et cron-secret.
 
@@ -188,7 +199,11 @@ Gør den til standard-landing: skift `src/app/[locale]/(app)/dashboard/page.tsx`
 
 ### 4.2 Board-komponent
 
-`src/components/leads/lead-board.tsx` (client). Kolonner pr. status: Nye · Kontaktet · No pickup · Møde · Vundet/Tabt. Den gamle søgbare pulje (`/leads/companies`) bevares som "udforsk hele databasen".
+`src/components/leads/lead-board.tsx` (client). Kolonner pr. status: Nye · Kontaktet · Opfølgning (`no_pickup`) · Møde · Vundet/Tabt. Den gamle søgbare pulje (`/leads/companies`) bevares som "udforsk hele databasen".
+
+**Boardet viser alle aktive leads på tværs af datoer**, ikke kun `list_date = i dag` — en igangværende dialog må ikke forsvinde ved midnat. Dagens friske markeres i stedet med et "Ny i dag"-badge på kortet.
+
+**Bemærk modsætningen i §1.2:** `status = 'no_pickup'` medfører `in_trash = true`, så en forespørgsel på `in_trash = false` alene ville efterlade Opfølgning-kolonnen permanent tom. `fetchBoardLeads` bruger derfor `.or("in_trash.eq.false,status.eq.no_pickup")`, hvilket gør skraldespanden synlig som en "kommer tilbage {dato}"-kolonne.
 
 ### 4.3 Lead-kort
 
