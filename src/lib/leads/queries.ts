@@ -158,6 +158,175 @@ export async function fetchDistinctCities(): Promise<string[]> {
   return Array.from(cities);
 }
 
+// ============================================================
+// Daily list / CRM board
+// ============================================================
+
+export type LeadAssignmentRow =
+  Database["public"]["Tables"]["lead_assignments"]["Row"];
+
+/** The company fields a lead card renders. */
+export type BoardCompany = Pick<
+  CompanyRow,
+  | "id"
+  | "name"
+  | "slug"
+  | "website"
+  | "location_city"
+  | "country"
+  | "industry"
+  | "cvr_industry_text"
+  | "open_jobs_count"
+  | "phone"
+  | "email"
+  | "contact_person_name"
+  | "website_phone"
+  | "website_email"
+  | "website_contact_person"
+  | "website_contact_title"
+  | "krak_phone"
+  | "krak_contact_person"
+  | "krak_contact_title"
+>;
+
+export type BoardLead = Pick<
+  LeadAssignmentRow,
+  | "id"
+  | "company_id"
+  | "list_date"
+  | "origin"
+  | "status"
+  | "rating"
+  | "note"
+  | "follow_up_at"
+  | "in_trash"
+> & { company: BoardCompany | null };
+
+/** Newest-first cap. Closed leads are never trashed, so the board can grow. */
+const BOARD_LIMIT = 500;
+
+/**
+ * Every lead currently on the user's board, across all list dates.
+ *
+ * The `.or` is deliberate. `status = 'no_pickup'` implies `in_trash = true`,
+ * so filtering on `in_trash = false` alone would leave the board's follow-up
+ * column permanently empty. Letting exactly those rows through turns the trash
+ * into a visible "waiting to come back" column with its follow-up date.
+ */
+export async function fetchBoardLeads(userId: string): Promise<BoardLead[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("lead_assignments")
+    .select(
+      `id, company_id, list_date, origin, status, rating, note, follow_up_at, in_trash,
+       company:companies (
+         id, name, slug, website, location_city, country, industry,
+         cvr_industry_text, open_jobs_count,
+         phone, email, contact_person_name,
+         website_phone, website_email, website_contact_person, website_contact_title,
+         krak_phone, krak_contact_person, krak_contact_title
+       )`,
+    )
+    .eq("user_id", userId)
+    .or("in_trash.eq.false,status.eq.no_pickup")
+    .order("list_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(BOARD_LIMIT);
+
+  if (error) throw error;
+  // database.ts is hand-written, so embedded-relation inference needs the same
+  // escape hatch fetchJobs already uses.
+  return (data ?? []) as unknown as BoardLead[];
+}
+
+export type ListPreferencesValues = {
+  dailyTarget: number;
+  trashMax: number;
+  followUpDays: number;
+};
+
+export const DEFAULT_LIST_PREFERENCES: ListPreferencesValues = {
+  dailyTarget: 50,
+  trashMax: 10,
+  followUpDays: 7,
+};
+
+export async function fetchListPreferences(
+  userId: string,
+): Promise<ListPreferencesValues> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("list_preferences")
+    .select("daily_target, trash_max, follow_up_days")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!data) return DEFAULT_LIST_PREFERENCES;
+  return {
+    dailyTarget: data.daily_target,
+    trashMax: data.trash_max,
+    followUpDays: data.follow_up_days,
+  };
+}
+
+export async function fetchExcludedCompanies(
+  userId: string,
+): Promise<{ id: string; name: string; name_normalized: string }[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("excluded_companies")
+    .select("id, name, name_normalized")
+    .eq("user_id", userId)
+    .order("name", { ascending: true })
+    .limit(2000);
+  if (error) return [];
+  return data ?? [];
+}
+
+export async function fetchBlockedIndustries(
+  userId: string,
+): Promise<{ industry_code: number; industry_label: string }[]> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("blocked_industries")
+    .select("industry_code, industry_label")
+    .eq("user_id", userId)
+    .order("industry_label", { ascending: true })
+    .limit(500);
+  if (error) return [];
+  return data ?? [];
+}
+
+/**
+ * The industries that actually occur in the pool, so the settings combobox
+ * offers real choices instead of the full DB07 catalogue.
+ */
+export async function fetchIndustryOptions(): Promise<
+  { code: number; label: string }[]
+> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("companies")
+    .select("cvr_industry_code, cvr_industry_text")
+    .not("cvr_industry_code", "is", null)
+    .order("cvr_industry_text", { ascending: true })
+    .limit(2000);
+  if (error) return [];
+
+  const byCode = new Map<number, string>();
+  for (const row of data ?? []) {
+    if (row.cvr_industry_code === null) continue;
+    if (byCode.has(row.cvr_industry_code)) continue;
+    byCode.set(
+      row.cvr_industry_code,
+      row.cvr_industry_text ?? String(row.cvr_industry_code),
+    );
+  }
+  return Array.from(byCode, ([code, label]) => ({ code, label })).sort((a, b) =>
+    a.label.localeCompare(b.label, "da"),
+  );
+}
+
 export async function fetchActiveDataSources(): Promise<
   { id: string; name: string }[]
 > {

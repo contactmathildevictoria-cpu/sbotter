@@ -11,27 +11,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { EnrichStatus } from "@/components/leads/enrich-status";
 import type { CompaniesPage } from "@/lib/leads/queries";
+import {
+  displayHost,
+  resolveCompanyContact,
+  telHref,
+  websiteHref,
+} from "@/lib/leads/contact";
 import { formatRelativeDate } from "@/lib/format";
-
-// Danish numbers come from CVR without a country code; prefix +45 for tel: links.
-function telHref(phone: string): string {
-  const trimmed = phone.replace(/\s+/g, "");
-  return trimmed.startsWith("+") ? trimmed : `+45${trimmed}`;
-}
-
-// `website` may be stored as a bare domain; ensure links have a scheme.
-function websiteHref(url: string): string {
-  return /^https?:\/\//i.test(url) ? url : `https://${url}`;
-}
-
-// Bare hostname for a compact, readable website link.
-function displayHost(url: string): string {
-  try {
-    return new URL(websiteHref(url)).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
 
 // Colored dot per enrichment status, for the debug Status column.
 function statusDotClass(status: string): string {
@@ -95,40 +81,19 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
         </TableHeader>
         <TableBody>
           {page.rows.map((row) => {
-            // Per-field cascade: CVR → website (scraper) → Krak. CVR columns are
-            // never overwritten, so a fallback only surfaces when the CVR field
-            // is empty. A small tag marks which fallback a value came from.
-            const phone = row.phone ?? row.website_phone ?? row.krak_phone;
-            const email = row.email ?? row.website_email;
-            const contactName =
-              row.contact_person_name ??
-              row.website_contact_person ??
-              row.krak_contact_person;
-            // CVR has no title; website + Krak do — use the title from whichever
-            // source the name came from.
-            const contactTitle = row.contact_person_name
-              ? null
-              : row.website_contact_person
-                ? row.website_contact_title
-                : row.krak_contact_person
-                  ? row.krak_contact_title
-                  : null;
-            const phoneSource: "web" | "krak" | null = row.phone
-              ? null
-              : row.website_phone
-                ? "web"
-                : row.krak_phone
-                  ? "krak"
-                  : null;
-            const emailFromWeb = !row.email && Boolean(row.website_email);
-            const nameSource: "web" | "krak" | null = row.contact_person_name
-              ? null
-              : row.website_contact_person
-                ? "web"
-                : row.krak_contact_person
-                  ? "krak"
-                  : null;
-            const hasAnyContact = Boolean(contactName || phone || email);
+            // Per-field cascade: CVR → website (scraper) → Krak. A small tag
+            // marks which fallback a value came from; CVR-sourced values get
+            // no tag, since that's the canonical source.
+            const {
+              phone,
+              phoneSource,
+              email,
+              emailSource,
+              contactName,
+              contactTitle,
+              contactSource,
+              hasAny: hasAnyContact,
+            } = resolveCompanyContact(row);
             return (
               <TableRow key={row.id}>
                 <TableCell>
@@ -164,7 +129,7 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                     >
                       <Phone className="text-muted-foreground size-3.5 shrink-0" />
                       {phone}
-                      {phoneSource === "web" ? (
+                      {phoneSource === "website" ? (
                         <SourceTag label="Web" title={tEnrich("fromWebsite")} />
                       ) : phoneSource === "krak" ? (
                         <SourceTag
@@ -187,7 +152,7 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                     >
                       <Mail className="text-muted-foreground size-3.5 shrink-0" />
                       {email}
-                      {emailFromWeb ? (
+                      {emailSource === "website" ? (
                         <SourceTag label="Web" title={tEnrich("fromWebsite")} />
                       ) : null}
                     </a>
@@ -208,9 +173,9 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                           · {contactTitle}
                         </span>
                       ) : null}
-                      {nameSource === "web" ? (
+                      {contactSource === "website" ? (
                         <SourceTag label="Web" title={tEnrich("fromWebsite")} />
-                      ) : nameSource === "krak" ? (
+                      ) : contactSource === "krak" ? (
                         <SourceTag
                           label={tKrak("source")}
                           title={tKrak("sourceKrak")}

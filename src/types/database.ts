@@ -27,6 +27,17 @@ export type KrakEnrichmentStatus =
   | "no_match"
   | "skipped";
 
+export type LeadStatus =
+  | "new"
+  | "contacted"
+  | "no_pickup"
+  | "meeting"
+  | "won"
+  | "lost";
+
+/** Which tier of the daily-list engine put a lead on the board. */
+export type LeadOrigin = "fresh" | "recycled" | "fill";
+
 export type WebsiteScrapeStatus =
   | "pending"
   | "scraped"
@@ -370,11 +381,153 @@ export type Database = {
         };
         Relationships: [];
       };
+      list_preferences: {
+        Row: {
+          user_id: string;
+          daily_target: number;
+          trash_max: number;
+          follow_up_days: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          daily_target?: number;
+          trash_max?: number;
+          follow_up_days?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          daily_target?: number;
+          trash_max?: number;
+          follow_up_days?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      lead_assignments: {
+        Row: {
+          id: string;
+          user_id: string;
+          company_id: string;
+          job_posting_id: string | null;
+          list_date: string;
+          origin: LeadOrigin;
+          status: LeadStatus;
+          rating: number | null;
+          note: string | null;
+          follow_up_at: string | null;
+          in_trash: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          company_id: string;
+          job_posting_id?: string | null;
+          list_date?: string;
+          origin?: LeadOrigin;
+          status?: LeadStatus;
+          rating?: number | null;
+          note?: string | null;
+          follow_up_at?: string | null;
+          in_trash?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          company_id?: string;
+          job_posting_id?: string | null;
+          list_date?: string;
+          origin?: LeadOrigin;
+          status?: LeadStatus;
+          rating?: number | null;
+          note?: string | null;
+          follow_up_at?: string | null;
+          in_trash?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "lead_assignments_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "lead_assignments_job_posting_id_fkey";
+            columns: ["job_posting_id"];
+            isOneToOne: false;
+            referencedRelation: "job_postings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      excluded_companies: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          name_normalized: string;
+          cvr: string | null;
+          domain: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          name_normalized: string;
+          cvr?: string | null;
+          domain?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          name_normalized?: string;
+          cvr?: string | null;
+          domain?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      blocked_industries: {
+        Row: {
+          user_id: string;
+          industry_code: number;
+          industry_label: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          industry_code: number;
+          industry_label: string;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          industry_code?: number;
+          industry_label?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<never, never>;
     Functions: Record<never, never>;
     Enums: {
       plan_tier: PlanTier;
+      lead_status: LeadStatus;
     };
     CompositeTypes: Record<never, never>;
   };

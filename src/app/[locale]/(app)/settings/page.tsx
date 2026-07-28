@@ -3,8 +3,17 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { BlockedIndustriesManager } from "@/components/settings/blocked-industries-manager";
+import { ExcludedCompaniesManager } from "@/components/settings/excluded-companies-manager";
+import { ListPreferencesForm } from "@/components/settings/list-preferences-form";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { signOutAction } from "@/lib/auth/actions";
+import {
+  fetchBlockedIndustries,
+  fetchExcludedCompanies,
+  fetchIndustryOptions,
+  fetchListPreferences,
+} from "@/lib/leads/queries";
 import { PLAN_LABELS, type PlanTier } from "@/lib/plans";
 
 export default async function SettingsPage({
@@ -15,6 +24,9 @@ export default async function SettingsPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("Settings");
+  const tList = await getTranslations("Settings.list");
+  const tExcluded = await getTranslations("Settings.excluded");
+  const tIndustries = await getTranslations("Settings.industries");
 
   const supabase = await createSupabaseServerClient();
   const {
@@ -30,8 +42,16 @@ export default async function SettingsPage({
 
   const plan: PlanTier = profile?.plan ?? "free";
 
+  const [preferences, excluded, blockedIndustries, industryOptions] =
+    await Promise.all([
+      fetchListPreferences(user.id),
+      fetchExcludedCompanies(user.id),
+      fetchBlockedIndustries(user.id),
+      fetchIndustryOptions(),
+    ]);
+
   return (
-    <div className="container mx-auto max-w-2xl space-y-6 px-6 py-8">
+    <div className="container mx-auto max-w-3xl space-y-6 px-6 py-8">
       <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
 
       <section className="bg-card space-y-4 rounded-xl border p-6">
@@ -52,6 +72,42 @@ export default async function SettingsPage({
           <span className="text-muted-foreground">{t("upgradeComingSoon")}</span>
           <Button disabled>{t("upgrade")}</Button>
         </div>
+      </section>
+
+      <section className="bg-card space-y-4 rounded-xl border p-6">
+        <div className="space-y-1">
+          <h2 className="text-base font-semibold">{tList("title")}</h2>
+          <p className="text-muted-foreground text-sm">
+            {tList("description")}
+          </p>
+        </div>
+        <Separator />
+        <ListPreferencesForm initial={preferences} />
+      </section>
+
+      <section className="bg-card space-y-4 rounded-xl border p-6">
+        <div className="space-y-1">
+          <h2 className="text-base font-semibold">{tExcluded("title")}</h2>
+          <p className="text-muted-foreground text-sm">
+            {tExcluded("description")}
+          </p>
+        </div>
+        <Separator />
+        <ExcludedCompaniesManager companies={excluded} />
+      </section>
+
+      <section className="bg-card space-y-4 rounded-xl border p-6">
+        <div className="space-y-1">
+          <h2 className="text-base font-semibold">{tIndustries("title")}</h2>
+          <p className="text-muted-foreground text-sm">
+            {tIndustries("description")}
+          </p>
+        </div>
+        <Separator />
+        <BlockedIndustriesManager
+          blocked={blockedIndustries}
+          options={industryOptions}
+        />
       </section>
 
       <form action={signOutAction}>

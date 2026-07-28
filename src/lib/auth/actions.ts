@@ -3,6 +3,10 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+// A "use server" module may only export async functions — even a type-only
+// re-export is compiled as a runtime export and fails the build. Import the
+// shared shape from @/lib/action-result directly instead.
+import type { ActionResult } from "@/lib/action-result";
 import { env } from "@/lib/env";
 
 const signInSchema = z.object({
@@ -16,8 +20,6 @@ const signUpSchema = z.object({
   password: z.string().min(8),
   fullName: z.string().min(1).max(120),
 });
-
-export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
 
 export async function signInAction(formData: FormData): Promise<ActionResult> {
   const parsed = signInSchema.safeParse({

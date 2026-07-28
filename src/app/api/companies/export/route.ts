@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parseFiltersFromSearchParams } from "@/lib/leads/filters";
+import { resolveCompanyContact } from "@/lib/leads/contact";
 import { fetchCompanies } from "@/lib/leads/queries";
 
 export const runtime = "nodejs";
@@ -52,19 +53,14 @@ export async function GET(request: NextRequest) {
 
   const lines = [HEADERS.join(",")];
   for (const r of rows) {
-    const phone = r.phone ?? r.website_phone ?? r.krak_phone;
-    const email = r.email ?? r.website_email;
-    const contact =
-      r.contact_person_name ??
-      r.website_contact_person ??
-      r.krak_contact_person;
+    const { phone, email, contactName } = resolveCompanyContact(r);
     const location = [r.location_city, r.country].filter(Boolean).join(", ");
     lines.push(
       [
         csvCell(r.name),
         csvCell(phone),
         csvCell(email),
-        csvCell(contact),
+        csvCell(contactName),
         csvCell(r.website),
         csvCell(location),
         csvCell(r.open_jobs_count),
