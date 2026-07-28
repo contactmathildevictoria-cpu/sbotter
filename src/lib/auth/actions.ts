@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { ActionResult } from "@/lib/action-result";
 import { env } from "@/lib/env";
 
 const signInSchema = z.object({
@@ -17,7 +18,9 @@ const signUpSchema = z.object({
   fullName: z.string().min(1).max(120),
 });
 
-export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; error: string };
+// Lives in @/lib/action-result now that more than one feature uses it.
+// Re-exported here so existing imports keep working.
+export type { ActionResult };
 
 export async function signInAction(formData: FormData): Promise<ActionResult> {
   const parsed = signInSchema.safeParse({
