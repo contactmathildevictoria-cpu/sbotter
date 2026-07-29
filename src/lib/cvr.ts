@@ -2,6 +2,7 @@ import "server-only";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { env } from "@/lib/env";
 import { scrapeWebsiteContacts } from "@/lib/website-scraper";
+import { applyAiPhoneResult, findPhoneViaAI } from "@/lib/ai-phone";
 import type { CvrEnrichmentStatus } from "@/types/database";
 
 // Free Danish CVR registry API. No account needed — just a valid User-Agent in
@@ -533,6 +534,144 @@ export async function enrichCompanyFromWebsite(
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Pass 4 is capped low and paced slowly: every call runs web search, which is
+// slow and billed per search on top of tokens.
+const AI_BATCH_LIMIT = 15;
+const AI_DELAY_MS = 2000;
+
+/**
+ * Pass 4 — AI phone lookup for companies no other layer could reach.
+ *
+ * Selects only rows where phone, krak_phone AND website_phone are all null and
+ * the AI lookup hasn't been tried. A no-op with a log line when no API key is
+ * configured, so a missing key never fails the enrichment batch.
+ */
+async function runAiPhonePass(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+): Promise<BatchEnrichSummary["ai"]> {
+  const empty = {
+    processed: 0,
+    enriched: 0,
+    noMatch: 0,
+    failed: 0,
+    remaining: 0,
+    skippedNoKey: false,
+    calls: 0,
+    webSearches: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+  };
+
+  if (!env.anthropicApiKey) {
+    console.log("[ai] pass 4 skipped — ANTHROPIC_API_KEY not configured");
+    return { ...empty, skippedNoKey: true };
+  }
+
+  // Retire companies that gained a phone from a trusted layer since their last
+  // run, so they don't sit in the queue forever. Same shape as Pass 3's
+  // retirement above.
+  await supabase
+    .from("companies")
+    .update({ ai_enrichment_status: "skipped" })
+    .eq("ai_enrichment_status", "pending")
+    .or("phone.not.is.null,krak_phone.not.is.null,website_phone.not.is.null");
+
+  const { data: needsAi } = await supabase
+    .from("companies")
+    .select("id, name, location_city, website")
+    .is("phone", null)
+    .is("krak_phone", null)
+    .is("website_phone", null)
+    .eq("ai_enrichment_status", "pending")
+    .order("created_at", { ascending: true })
+    .limit(AI_BATCH_LIMIT);
+
+  const aiList = needsAi ?? [];
+  let aiEnriched = 0;
+  let aiNoMatch = 0;
+  let aiFailed = 0;
+  let calls = 0;
+  let webSearches = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
+
+  for (let i = 0; i < aiList.length; i++) {
+    const c = aiList[i];
+    const lookup = await findPhoneViaAI({
+      name: c.name,
+      city: c.location_city,
+      website: c.website,
+    });
+
+    if (lookup) {
+      calls++;
+      webSearches += lookup.webSearches;
+      inputTokens += lookup.inputTokens;
+      outputTokens += lookup.outputTokens;
+    }
+
+    // A null lookup is a call that failed outright — record it as failed so it
+    // is retried, rather than burning the company's one shot as no_match.
+    const status = lookup
+      ? await applyAiPhoneResult(c.id, lookup.result)
+      : await markAiFailed(supabase, c.id);
+
+    if (status === "enriched") aiEnriched++;
+    else if (status === "no_match") aiNoMatch++;
+    else if (status === "failed") aiFailed++;
+
+    console.log(
+      `[ai] batch ${i + 1}/${aiList.length} — ${c.name} (${c.id}) → ${status}` +
+        (lookup ? ` (${lookup.webSearches} searches)` : ""),
+    );
+
+    if (i < aiList.length - 1) await sleep(AI_DELAY_MS);
+  }
+
+  const { count: aiRemaining } = await supabase
+    .from("companies")
+    .select("id", { count: "exact", head: true })
+    .is("phone", null)
+    .is("krak_phone", null)
+    .is("website_phone", null)
+    .eq("ai_enrichment_status", "pending");
+
+  // The cost line: how many calls this batch made, how many web searches they
+  // ran, and the tokens they burned.
+  console.log(
+    `[ai] pass 4 usage — ${calls} calls, ${webSearches} web searches, ` +
+      `${inputTokens} in / ${outputTokens} out tokens`,
+  );
+
+  return {
+    processed: aiList.length,
+    enriched: aiEnriched,
+    noMatch: aiNoMatch,
+    failed: aiFailed,
+    remaining: aiRemaining ?? 0,
+    skippedNoKey: false,
+    calls,
+    webSearches,
+    inputTokens,
+    outputTokens,
+  };
+}
+
+/** A lookup that never returned — mark it retryable. */
+async function markAiFailed(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  companyId: string,
+): Promise<"failed"> {
+  await supabase
+    .from("companies")
+    .update({
+      ai_enriched_at: new Date().toISOString(),
+      ai_enrichment_status: "failed",
+    })
+    .eq("id", companyId);
+  return "failed";
+}
+
 export type BatchEnrichSummary = {
   processed: number;
   enriched: number;
@@ -552,6 +691,21 @@ export type BatchEnrichSummary = {
     failed: number;
     noWebsite: number;
     remaining: number;
+  };
+  // Pass 4: AI lookup for companies with no phone from any of the three
+  // trusted layers. calls/webSearches/tokens are there so the cost of the
+  // layer is visible per batch without digging through provider dashboards.
+  ai: {
+    processed: number;
+    enriched: number;
+    noMatch: number;
+    failed: number;
+    remaining: number;
+    skippedNoKey: boolean;
+    calls: number;
+    webSearches: number;
+    inputTokens: number;
+    outputTokens: number;
   };
 };
 
@@ -697,6 +851,12 @@ export async function enrichPendingCompanies(): Promise<BatchEnrichSummary> {
     .not("website", "is", null)
     .eq("website_scrape_status", "pending");
 
+  // --- Pass 4: AI phone lookup for the long tail ------------------------------
+  // Last resort: only companies where CVR, Krak AND the website scraper all
+  // came up empty. Each call runs web search, so it is slow and costs real
+  // money — hence the low cap, the sleep, and the per-batch usage log below.
+  const ai = await runAiPhonePass(supabase);
+
   const summary: BatchEnrichSummary = {
     processed: total,
     enriched,
@@ -717,6 +877,7 @@ export async function enrichPendingCompanies(): Promise<BatchEnrichSummary> {
       noWebsite: webNoWebsite,
       remaining: webRemaining ?? 0,
     },
+    ai,
   };
   console.log("[cvr] batch summary:", JSON.stringify(summary));
   return summary;

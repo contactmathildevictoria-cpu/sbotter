@@ -9,14 +9,19 @@
  * scraper owns `website_*`, Krak owns `krak_*`. So the per-field cascade below
  * is what turns three partial records into one contact.
  *
- * Order is CVR → website → Krak. Note that docs/fase-1-liste-motor-og-crm.md
+ * Order is CVR → website → Krak → AI. Note that docs/fase-1-liste-motor-og-crm.md
  * once described it as CVR → Krak → website; the shipped behaviour has always
  * been website first (the scraper usually finds a direct contact where Krak
  * only has the switchboard), and changing it would silently alter what every
  * existing user sees in the leads table and the CSV export.
+ *
+ * "ai" is last and is the one source that is not trusted on its own: it comes
+ * from an LLM with web search, so it always carries `phoneSourceUrl` and must
+ * always be rendered with a visible marker linking to that source. An AI number
+ * must never appear unmarked anywhere. See docs/ai-phone-layer.md.
  */
 
-export type ContactSource = "cvr" | "website" | "krak";
+export type ContactSource = "cvr" | "website" | "krak" | "ai";
 
 /**
  * Structural, all-optional shape so a partial `select()` satisfies it just as
@@ -33,33 +38,53 @@ export type CompanyContactFields = {
   krak_phone?: string | null;
   krak_contact_person?: string | null;
   krak_contact_title?: string | null;
+  ai_phone?: string | null;
+  ai_contact_person?: string | null;
+  ai_source_url?: string | null;
 };
 
 export type CompanyContact = {
   phone: string | null;
   phoneSource: ContactSource | null;
+  /**
+   * Where an AI-sourced phone was found. Non-null exactly when
+   * `phoneSource === "ai"` — the AI layer refuses to store a number without
+   * one — so it is always available to link the required source marker.
+   */
+  phoneSourceUrl: string | null;
   email: string | null;
-  /** Krak has no email column, so this is never "krak". */
-  emailSource: Exclude<ContactSource, "krak"> | null;
+  /** Only CVR and the website scraper produce emails. */
+  emailSource: Extract<ContactSource, "cvr" | "website"> | null;
   contactName: string | null;
   /** CVR carries no job title, so this is null when the name came from CVR. */
   contactTitle: string | null;
   contactSource: ContactSource | null;
+  /** Same URL, for a contact name that came from the AI layer. */
+  contactSourceUrl: string | null;
   hasAny: boolean;
 };
 
 export function resolveCompanyContact(
   company: CompanyContactFields,
 ): CompanyContact {
+  // An AI phone is only usable if it carries its source URL. Guarding here as
+  // well as at write time means a row that somehow lost its provenance is
+  // treated as having no AI phone at all, rather than rendering unmarked.
+  const aiSourceUrl = company.ai_source_url ?? null;
+  const aiPhone = aiSourceUrl ? (company.ai_phone ?? null) : null;
+  const aiContactPerson = aiSourceUrl ? (company.ai_contact_person ?? null) : null;
+
   const phone =
-    company.phone ?? company.website_phone ?? company.krak_phone ?? null;
+    company.phone ?? company.website_phone ?? company.krak_phone ?? aiPhone ?? null;
   const phoneSource: ContactSource | null = company.phone
     ? "cvr"
     : company.website_phone
       ? "website"
       : company.krak_phone
         ? "krak"
-        : null;
+        : aiPhone
+          ? "ai"
+          : null;
 
   const email = company.email ?? company.website_email ?? null;
   const emailSource: CompanyContact["emailSource"] = company.email
@@ -72,6 +97,7 @@ export function resolveCompanyContact(
     company.contact_person_name ??
     company.website_contact_person ??
     company.krak_contact_person ??
+    aiContactPerson ??
     null;
   const contactSource: ContactSource | null = company.contact_person_name
     ? "cvr"
@@ -79,9 +105,12 @@ export function resolveCompanyContact(
       ? "website"
       : company.krak_contact_person
         ? "krak"
-        : null;
+        : aiContactPerson
+          ? "ai"
+          : null;
   // The title has to follow whichever source supplied the name, or a Krak
-  // title could end up captioning a website-scraped person.
+  // title could end up captioning a website-scraped person. The AI layer
+  // stores no title.
   const contactTitle =
     contactSource === "website"
       ? (company.website_contact_title ?? null)
@@ -92,11 +121,13 @@ export function resolveCompanyContact(
   return {
     phone,
     phoneSource,
+    phoneSourceUrl: phoneSource === "ai" ? aiSourceUrl : null,
     email,
     emailSource,
     contactName,
     contactTitle,
     contactSource,
+    contactSourceUrl: contactSource === "ai" ? aiSourceUrl : null,
     hasAny: Boolean(contactName || phone || email),
   };
 }

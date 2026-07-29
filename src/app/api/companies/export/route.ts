@@ -19,6 +19,10 @@ function csvCell(value: string | number | null | undefined): string {
 const HEADERS = [
   "Company name",
   "Phone",
+  // Which layer the phone came from, and — for AI-found numbers — the page it
+  // was read from. An AI number must never leave the system unmarked.
+  "Phone source",
+  "Phone source URL",
   "Email",
   "Contact person",
   "Website",
@@ -30,7 +34,8 @@ const HEADERS = [
 
 // GET /api/companies/export?<same filter params as the leads page>
 // Streams ALL matching companies (not just the current page) as CSV.
-// Phone/email/contact use the same CVR → website → Krak cascade as the table.
+// Phone/email/contact use the same CVR → website → Krak → AI cascade as the
+// table, including the AI provenance columns.
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
   const {
@@ -53,12 +58,15 @@ export async function GET(request: NextRequest) {
 
   const lines = [HEADERS.join(",")];
   for (const r of rows) {
-    const { phone, email, contactName } = resolveCompanyContact(r);
+    const { phone, phoneSource, phoneSourceUrl, email, contactName } =
+      resolveCompanyContact(r);
     const location = [r.location_city, r.country].filter(Boolean).join(", ");
     lines.push(
       [
         csvCell(r.name),
         csvCell(phone),
+        csvCell(phoneSource),
+        csvCell(phoneSourceUrl),
         csvCell(email),
         csvCell(contactName),
         csvCell(r.website),

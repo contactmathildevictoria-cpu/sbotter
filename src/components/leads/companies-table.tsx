@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { EnrichStatus } from "@/components/leads/enrich-status";
+import { AiSourceLink } from "@/components/leads/ai-source-link";
 import type { CompaniesPage } from "@/lib/leads/queries";
 import {
   displayHost,
@@ -62,6 +63,7 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
   const t = await getTranslations("Leads.columns");
   const tEnrich = await getTranslations("Leads.enrich");
   const tKrak = await getTranslations("Leads.krak");
+  const tAi = await getTranslations("Leads.ai");
 
   return (
     <div className="bg-card overflow-hidden rounded-xl border">
@@ -92,6 +94,8 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
               contactName,
               contactTitle,
               contactSource,
+              contactSourceUrl,
+              phoneSourceUrl,
               hasAny: hasAnyContact,
             } = resolveCompanyContact(row);
             return (
@@ -120,24 +124,32 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                   ) : null}
                 </TableCell>
 
-                {/* Telefon */}
+                {/* Telefon. The AI marker is a sibling of the tel: link, not a
+                    child — nested anchors are invalid HTML. */}
                 <TableCell className="text-sm">
                   {phone ? (
-                    <a
-                      href={`tel:${telHref(phone)}`}
-                      className="inline-flex items-center gap-1.5 underline-offset-4 hover:underline"
-                    >
-                      <Phone className="text-muted-foreground size-3.5 shrink-0" />
-                      {phone}
-                      {phoneSource === "website" ? (
-                        <SourceTag label="Web" title={tEnrich("fromWebsite")} />
-                      ) : phoneSource === "krak" ? (
-                        <SourceTag
-                          label={tKrak("source")}
-                          title={tKrak("sourceKrak")}
-                        />
+                    <span className="inline-flex items-center gap-1.5">
+                      <a
+                        href={`tel:${telHref(phone)}`}
+                        className="inline-flex items-center gap-1.5 underline-offset-4 hover:underline"
+                      >
+                        <Phone className="text-muted-foreground size-3.5 shrink-0" />
+                        {phone}
+                        {phoneSource === "website" ? (
+                          <SourceTag label="Web" title={tEnrich("fromWebsite")} />
+                        ) : phoneSource === "krak" ? (
+                          <SourceTag
+                            label={tKrak("source")}
+                            title={tKrak("sourceKrak")}
+                          />
+                        ) : phoneSource === "ai" ? (
+                          <SourceTag label="AI" title={tAi("foundByAi")} />
+                        ) : null}
+                      </a>
+                      {phoneSourceUrl ? (
+                        <AiSourceLink href={phoneSourceUrl} label={tAi("sourceLink")} />
                       ) : null}
-                    </a>
+                    </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}
@@ -180,6 +192,11 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                           label={tKrak("source")}
                           title={tKrak("sourceKrak")}
                         />
+                      ) : contactSource === "ai" ? (
+                        <SourceTag label="AI" title={tAi("foundByAi")} />
+                      ) : null}
+                      {contactSourceUrl ? (
+                        <AiSourceLink href={contactSourceUrl} label={tAi("sourceLink")} />
                       ) : null}
                     </div>
                   ) : !hasAnyContact ? (

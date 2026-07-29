@@ -53,6 +53,11 @@ export const env = {
     // Optional. Removes the 50/day cvrapi.dk rate limit (HTTP Basic auth).
     return optional(process.env.CVRAPI_TOKEN);
   },
+  get anthropicApiKey() {
+    // Optional: Pass 4 (AI phone lookup) logs and skips when it's missing,
+    // rather than failing the whole enrichment batch.
+    return optional(process.env.ANTHROPIC_API_KEY);
+  },
   get cronSecret() {
     // Bearer secret Vercel Cron sends in the Authorization header. Optional here;
     // the cron route refuses to run if it's not configured.

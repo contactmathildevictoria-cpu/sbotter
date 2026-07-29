@@ -171,6 +171,11 @@
       "DELETE_FAILED": "Could not delete",
       "ALREADY_EXCLUDED": "That company is already on the list",
       "GENERATE_FAILED": "Could not fetch leads"
+    },
+    "ai": {
+      "foundByAi": "Found automatically by AI — click the icon to see the source",
+      "sourceLink": "Phone number found automatically — click to see the source",
+      "source": "AI"
     }
   },
   "NotFound": {
