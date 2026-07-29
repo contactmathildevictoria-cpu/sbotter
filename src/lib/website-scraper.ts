@@ -1,5 +1,6 @@
 import "server-only";
 import { parse, type HTMLElement } from "node-html-parser";
+import { PHONE_RE, normalizePhone } from "@/lib/phone";
 
 // Fallback contact enrichment: when a company's CVR record has no phone/email,
 // we visit the company's own website and try to scrape contact info from the
@@ -26,9 +27,6 @@ const FETCH_TIMEOUT_MS = 10_000;
 const MAX_SUBPAGES = 4;
 const MAX_HTML_BYTES = 2_000_000; // ignore enormous pages — almost never useful
 
-// Danish 8-digit phone numbers, optionally prefixed with +45. Lookarounds keep
-// us from matching a slice of a longer digit run (e.g. an account number).
-const PHONE_RE = /(?<!\d)(?:\+45[\s.-]?)?(?:\d{2}[\s.-]?){3}\d{2}(?!\d)/g;
 const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 // Anchored, non-global twin of EMAIL_RE for validating a single candidate. (A
 // /g regex is stateful under .test(), so it must not be reused that way.)
@@ -169,21 +167,8 @@ function baseDomain(host: string): string {
 // Phone / email normalization + classification
 // ---------------------------------------------------------------------------
 
-/** Normalize to a bare 8-digit key + a grouped display form, or null if not a
- *  plausible Danish number. Only strips a leading 45 when it's clearly a country
- *  code (explicit +45/0045, or a 10-digit number starting with 45). */
-function normalizePhone(raw: string): { key: string; display: string } | null {
-  const cleaned = raw.replace(/[^\d+]/g, "");
-  let digits: string;
-  if (cleaned.startsWith("+45")) digits = cleaned.slice(3);
-  else if (cleaned.startsWith("0045")) digits = cleaned.slice(4);
-  else if (cleaned.length === 10 && cleaned.startsWith("45")) digits = cleaned.slice(2);
-  else digits = cleaned.replace(/^\+/, "");
-  digits = digits.replace(/\D/g, "");
-  if (digits.length !== 8) return null;
-  if (/^(\d)\1{7}$/.test(digits)) return null; // 00000000, 11111111 — not a phone
-  return { key: digits, display: digits.replace(/(\d{2})(?=\d)/g, "$1 ") };
-}
+// PHONE_RE and normalizePhone now live in @/lib/phone (imported above) so the
+// AI phone layer can reuse them — that module is pure, this one is server-only.
 
 function emailLocalPart(email: string): string {
   return email.slice(0, email.indexOf("@")).toLowerCase();
