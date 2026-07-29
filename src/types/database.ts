@@ -27,6 +27,13 @@ export type KrakEnrichmentStatus =
   | "no_match"
   | "skipped";
 
+export type AiEnrichmentStatus =
+  | "pending"
+  | "enriched"
+  | "no_match"
+  | "failed"
+  | "skipped";
+
 export type LeadStatus =
   | "new"
   | "contacted"
@@ -148,6 +155,11 @@ export type Database = {
           website_contact_title: string | null;
           website_scraped_at: string | null;
           website_scrape_status: WebsiteScrapeStatus;
+          ai_phone: string | null;
+          ai_contact_person: string | null;
+          ai_source_url: string | null;
+          ai_enriched_at: string | null;
+          ai_enrichment_status: AiEnrichmentStatus;
           created_at: string;
           updated_at: string;
         };
@@ -190,6 +202,11 @@ export type Database = {
           website_contact_title?: string | null;
           website_scraped_at?: string | null;
           website_scrape_status?: WebsiteScrapeStatus;
+          ai_phone?: string | null;
+          ai_contact_person?: string | null;
+          ai_source_url?: string | null;
+          ai_enriched_at?: string | null;
+          ai_enrichment_status?: AiEnrichmentStatus;
           created_at?: string;
           updated_at?: string;
         };
@@ -232,6 +249,11 @@ export type Database = {
           website_contact_title?: string | null;
           website_scraped_at?: string | null;
           website_scrape_status?: WebsiteScrapeStatus;
+          ai_phone?: string | null;
+          ai_contact_person?: string | null;
+          ai_source_url?: string | null;
+          ai_enriched_at?: string | null;
+          ai_enrichment_status?: AiEnrichmentStatus;
           created_at?: string;
           updated_at?: string;
         };
