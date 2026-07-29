@@ -171,6 +171,11 @@
       "DELETE_FAILED": "Kunne ikke slette",
       "ALREADY_EXCLUDED": "Firmaet er allerede på listen",
       "GENERATE_FAILED": "Kunne ikke hente leads"
+    },
+    "ai": {
+      "foundByAi": "Fundet automatisk af AI — klik på ikonet for at se kilden",
+      "sourceLink": "Telefonnummer fundet automatisk — klik for at se kilden",
+      "source": "AI"
     }
   },
   "NotFound": {

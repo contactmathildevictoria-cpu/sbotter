@@ -17,7 +17,12 @@ const EMPTY = {
   krak_phone: null,
   krak_contact_person: null,
   krak_contact_title: null,
+  ai_phone: null,
+  ai_contact_person: null,
+  ai_source_url: null,
 };
+
+const AI_SOURCE = "https://www.proff.dk/firma/eksempel-aps/12345678";
 
 describe("resolveCompanyContact", () => {
   it("prefers CVR over website and Krak", () => {
@@ -95,6 +100,83 @@ describe("resolveCompanyContact", () => {
     expect(c.phone).toBeNull();
     expect(c.contactName).toBeNull();
     expect(c.phoneSource).toBeNull();
+  });
+
+  it("falls back to AI only when all three trusted layers are empty", () => {
+    const c = resolveCompanyContact({
+      ...EMPTY,
+      ai_phone: "70208060",
+      ai_source_url: AI_SOURCE,
+    });
+    expect(c.phone).toBe("70208060");
+    expect(c.phoneSource).toBe("ai");
+    expect(c.phoneSourceUrl).toBe(AI_SOURCE);
+  });
+
+  it("never lets an AI phone outrank a trusted one", () => {
+    for (const trusted of ["phone", "website_phone", "krak_phone"] as const) {
+      const c = resolveCompanyContact({
+        ...EMPTY,
+        [trusted]: "11223344",
+        ai_phone: "70208060",
+        ai_source_url: AI_SOURCE,
+      });
+      expect(c.phone).toBe("11223344");
+      expect(c.phoneSource).not.toBe("ai");
+      // No AI value in play means no source marker to render.
+      expect(c.phoneSourceUrl).toBeNull();
+    }
+  });
+
+  it("ignores an AI phone that lost its source URL", () => {
+    // The invariant the whole layer rests on: an unsourced AI number is not
+    // shown at all, rather than shown unmarked.
+    const c = resolveCompanyContact({ ...EMPTY, ai_phone: "70208060" });
+    expect(c.phone).toBeNull();
+    expect(c.phoneSource).toBeNull();
+    expect(c.phoneSourceUrl).toBeNull();
+    expect(c.hasAny).toBe(false);
+  });
+
+  it("always pairs an AI-sourced value with a URL to mark it", () => {
+    // Property: phoneSource === "ai" implies a non-null phoneSourceUrl, and
+    // vice versa. This is what makes "never unmarked" enforceable in the UI.
+    const cases = [
+      EMPTY,
+      { ...EMPTY, ai_phone: "70208060", ai_source_url: AI_SOURCE },
+      { ...EMPTY, ai_phone: "70208060" },
+      { ...EMPTY, phone: "11223344", ai_phone: "70208060", ai_source_url: AI_SOURCE },
+      { ...EMPTY, ai_contact_person: "Mette Hansen", ai_source_url: AI_SOURCE },
+    ];
+    for (const input of cases) {
+      const c = resolveCompanyContact(input);
+      expect(c.phoneSourceUrl !== null).toBe(c.phoneSource === "ai");
+      expect(c.contactSourceUrl !== null).toBe(c.contactSource === "ai");
+    }
+  });
+
+  it("uses an AI contact person only as the last fallback, with its source", () => {
+    const fromAi = resolveCompanyContact({
+      ...EMPTY,
+      ai_contact_person: "Mette Hansen",
+      ai_source_url: AI_SOURCE,
+    });
+    expect(fromAi.contactName).toBe("Mette Hansen");
+    expect(fromAi.contactSource).toBe("ai");
+    expect(fromAi.contactSourceUrl).toBe(AI_SOURCE);
+    // The AI layer stores no job title.
+    expect(fromAi.contactTitle).toBeNull();
+
+    const krakWins = resolveCompanyContact({
+      ...EMPTY,
+      krak_contact_person: "Anna And",
+      krak_contact_title: "Direktør",
+      ai_contact_person: "Mette Hansen",
+      ai_source_url: AI_SOURCE,
+    });
+    expect(krakWins.contactName).toBe("Anna And");
+    expect(krakWins.contactSource).toBe("krak");
+    expect(krakWins.contactSourceUrl).toBeNull();
   });
 
   it("accepts a partial select() result", () => {

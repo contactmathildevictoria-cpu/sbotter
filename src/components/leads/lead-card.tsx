@@ -20,6 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AiSourceLink } from "@/components/leads/ai-source-link";
 import {
   displayHost,
   resolveCompanyContact,
@@ -61,6 +62,7 @@ export function LeadCard({
 }) {
   const t = useTranslations("Leads.card");
   const tStatus = useTranslations("Leads.status");
+  const tAi = useTranslations("Leads.ai");
 
   const company = lead.company;
   const contact = resolveCompanyContact(company ?? {});
@@ -109,6 +111,12 @@ export function LeadCard({
           ) : (
             <span className="text-muted-foreground">{t("noContact")}</span>
           )}
+          {contact.contactSourceUrl ? (
+            <AiSourceLink
+              href={contact.contactSourceUrl}
+              label={tAi("sourceLink")}
+            />
+          ) : null}
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -123,6 +131,14 @@ export function LeadCard({
           ) : (
             <span className="text-muted-foreground">{t("noPhone")}</span>
           )}
+          {/* An AI-found number is never shown bare — this links to the page
+              the model read it from so the seller can check it. */}
+          {contact.phoneSourceUrl ? (
+            <AiSourceLink
+              href={contact.phoneSourceUrl}
+              label={tAi("sourceLink")}
+            />
+          ) : null}
         </div>
 
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
