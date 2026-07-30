@@ -3,6 +3,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { env } from "@/lib/env";
 import { scrapeWebsiteContacts } from "@/lib/website-scraper";
 import { applyAiPhoneResult, findPhoneViaAI } from "@/lib/ai-phone";
+import { shouldRunAnother } from "@/lib/budget";
 import type { CvrEnrichmentStatus } from "@/types/database";
 
 // Free Danish CVR registry API. No account needed — just a valid User-Agent in
@@ -534,21 +535,59 @@ export async function enrichCompanyFromWebsite(
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Wall-clock budget for the three fast passes, well inside the 300s function
+// limit so the interactive button always gets a response.
+const DEFAULT_FAST_BUDGET_MS = 200_000;
+// Expected worst case per company, used to stop before starting work that
+// can't finish. Pass 3 dominates: homepage + up to MAX_SUBPAGES=4 subpages at
+// FETCH_TIMEOUT_MS=10s each, plus its 1.5s sleep.
+const CVR_EXPECTED_MS = 3_000;
+const DISCOVERY_EXPECTED_MS = 6_000;
+const WEBSITE_EXPECTED_MS = 52_000;
+
 // Pass 4 is capped low and paced slowly: every call runs web search, which is
-// slow and billed per search on top of tokens.
-const AI_BATCH_LIMIT = 15;
+// slow and billed per search on top of tokens. It runs on its own cron
+// (/api/cron/ai-phone), NOT in the interactive enrich batch — a single lookup
+// can take ~40s, so 15 of them would blow any request's time limit and leave
+// the "Enrich all" button spinning forever.
+const AI_BATCH_LIMIT = 5;
 const AI_DELAY_MS = 2000;
+/** Budget for a standalone AI pass, inside a 300s function. */
+const DEFAULT_AI_BUDGET_MS = 240_000;
+/** A web-search lookup plus its sleep. Used to stop before overshooting. */
+const AI_EXPECTED_CALL_MS = 45_000;
+
+/** The AI pass reports its own usage so the cost of the layer stays visible. */
+export type AiPassSummary = {
+  processed: number;
+  enriched: number;
+  noMatch: number;
+  failed: number;
+  remaining: number;
+  skippedNoKey: boolean;
+  calls: number;
+  webSearches: number;
+  inputTokens: number;
+  outputTokens: number;
+  /** The wall-clock budget cut the loop short; the rest stays queued. */
+  stoppedOnTime: boolean;
+};
 
 /**
  * Pass 4 — AI phone lookup for companies no other layer could reach.
  *
- * Selects only rows where phone, krak_phone AND website_phone are all null and
- * the AI lookup hasn't been tried. A no-op with a log line when no API key is
- * configured, so a missing key never fails the enrichment batch.
+ * Independently callable: the enrichment batch no longer runs it, and
+ * /api/cron/ai-phone calls only this. Selects only rows where phone, krak_phone
+ * AND website_phone are all null and the AI lookup hasn't been tried. A no-op
+ * with a log line when no API key is configured.
  */
-async function runAiPhonePass(
-  supabase: ReturnType<typeof createSupabaseServiceClient>,
-): Promise<BatchEnrichSummary["ai"]> {
+export async function runAiPhonePass(
+  opts: { limit?: number; budgetMs?: number } = {},
+): Promise<AiPassSummary> {
+  const supabase = createSupabaseServiceClient();
+  const limit = opts.limit ?? AI_BATCH_LIMIT;
+  const budgetMs = opts.budgetMs ?? DEFAULT_AI_BUDGET_MS;
+  const startedAt = Date.now();
   const empty = {
     processed: 0,
     enriched: 0,
@@ -560,6 +599,7 @@ async function runAiPhonePass(
     webSearches: 0,
     inputTokens: 0,
     outputTokens: 0,
+    stoppedOnTime: false,
   };
 
   if (!env.anthropicApiKey) {
@@ -584,7 +624,7 @@ async function runAiPhonePass(
     .is("website_phone", null)
     .eq("ai_enrichment_status", "pending")
     .order("created_at", { ascending: true })
-    .limit(AI_BATCH_LIMIT);
+    .limit(limit);
 
   const aiList = needsAi ?? [];
   let aiEnriched = 0;
@@ -595,7 +635,15 @@ async function runAiPhonePass(
   let inputTokens = 0;
   let outputTokens = 0;
 
+  let aiStoppedOnTime = false;
   for (let i = 0; i < aiList.length; i++) {
+    // One lookup can take ~40s (web search + Opus). Stop before starting one we
+    // can't finish inside the function's budget.
+    if (!shouldRunAnother(startedAt, budgetMs, Date.now(), AI_EXPECTED_CALL_MS)) {
+      aiStoppedOnTime = true;
+      console.warn(`[ai] pass 4 stopping early at ${i}/${aiList.length} — out of budget`);
+      break;
+    }
     const c = aiList[i];
     const lookup = await findPhoneViaAI({
       name: c.name,
@@ -644,7 +692,9 @@ async function runAiPhonePass(
   );
 
   return {
-    processed: aiList.length,
+    // What was actually attempted, not what was selected — the budget guard can
+    // cut the loop short.
+    processed: calls + aiFailed,
     enriched: aiEnriched,
     noMatch: aiNoMatch,
     failed: aiFailed,
@@ -654,6 +704,7 @@ async function runAiPhonePass(
     webSearches,
     inputTokens,
     outputTokens,
+    stoppedOnTime: aiStoppedOnTime,
   };
 }
 
@@ -692,32 +743,37 @@ export type BatchEnrichSummary = {
     noWebsite: number;
     remaining: number;
   };
-  // Pass 4: AI lookup for companies with no phone from any of the three
-  // trusted layers. calls/webSearches/tokens are there so the cost of the
-  // layer is visible per batch without digging through provider dashboards.
-  ai: {
-    processed: number;
-    enriched: number;
-    noMatch: number;
-    failed: number;
-    remaining: number;
-    skippedNoKey: boolean;
-    calls: number;
-    webSearches: number;
-    inputTokens: number;
-    outputTokens: number;
-  };
+  // The wall-clock budget cut a pass short. Anything not reached stays queued
+  // for the next run, so this is a normal outcome, not an error.
+  stoppedOnTime: boolean;
+  // NOTE: Pass 4 (AI phone lookup) is deliberately NOT part of this summary.
+  // It runs on its own cron via runAiPhonePass() — see the comment on
+  // AI_BATCH_LIMIT.
 };
 
 /**
- * Enrich a batch of companies that are still 'pending' or 'failed' (oldest
- * first). Used by the manual batch endpoint and the cron job. Sleeps 1s between
- * calls to respect the rate limit, and stops early if the daily quota is hit.
+ * Run the three FAST enrichment passes: CVR lookup, website discovery, website
+ * scrape. Used by the manual batch endpoint and the enrich cron.
+ *
+ * The AI phone lookup (Pass 4) is NOT run here — it lives on its own cron, see
+ * runAiPhonePass().
+ *
+ * Bounded by a wall-clock budget rather than by row caps alone. Caps don't
+ * bound the loop on their own: the website pass fetches a homepage plus up to 4
+ * subpages at a 10s timeout each, so one slow company can take ~50s. The budget
+ * is checked between companies and reported as `stoppedOnTime`, so a run always
+ * fits inside the function's limit and says when it didn't finish.
+ *
  * Batch size: 40 without a token, 200 with CVRAPI_TOKEN (no quota).
  */
-export async function enrichPendingCompanies(): Promise<BatchEnrichSummary> {
+export async function enrichPendingCompanies(
+  opts: { budgetMs?: number } = {},
+): Promise<BatchEnrichSummary> {
   const supabase = createSupabaseServiceClient();
   const limit = env.cvrApiToken ? 200 : 40;
+  const budgetMs = opts.budgetMs ?? DEFAULT_FAST_BUDGET_MS;
+  const startedAt = Date.now();
+  let stoppedOnTime = false;
 
   const { data: companies, error } = await supabase
     .from("companies")
@@ -738,6 +794,11 @@ export async function enrichPendingCompanies(): Promise<BatchEnrichSummary> {
   const total = companies?.length ?? 0;
 
   for (let i = 0; i < total; i++) {
+    if (!shouldRunAnother(startedAt, budgetMs, Date.now(), CVR_EXPECTED_MS)) {
+      stoppedOnTime = true;
+      console.warn(`[cvr] pass 1 stopping early at ${i}/${total} — out of budget`);
+      break;
+    }
     const c = companies![i];
     const { status, quotaExceeded, reason } = await enrichCompanyFromCvr(
       c.id,
@@ -796,6 +857,13 @@ export async function enrichPendingCompanies(): Promise<BatchEnrichSummary> {
   const discList = needsDiscovery ?? [];
   let discovered = 0;
   for (let i = 0; i < discList.length; i++) {
+    if (!shouldRunAnother(startedAt, budgetMs, Date.now(), DISCOVERY_EXPECTED_MS)) {
+      stoppedOnTime = true;
+      console.warn(
+        `[cvr] pass 2 stopping early at ${i}/${discList.length} — out of budget`,
+      );
+      break;
+    }
     const c = discList[i];
     const website = await discoverAndStoreWebsite(
       c.id,
@@ -833,6 +901,15 @@ export async function enrichPendingCompanies(): Promise<BatchEnrichSummary> {
   let webFailed = 0;
   let webNoWebsite = 0;
   for (let i = 0; i < webList.length; i++) {
+    // The expensive one: homepage + up to MAX_SUBPAGES subpages at a 10s
+    // timeout each, so budget for the realistic worst case.
+    if (!shouldRunAnother(startedAt, budgetMs, Date.now(), WEBSITE_EXPECTED_MS)) {
+      stoppedOnTime = true;
+      console.warn(
+        `[website] pass 3 stopping early at ${i}/${webList.length} — out of budget`,
+      );
+      break;
+    }
     const company = webList[i];
     const { status } = await enrichCompanyFromWebsite(company.id, company.website);
     if (status === "scraped") webScraped++;
@@ -850,12 +927,6 @@ export async function enrichPendingCompanies(): Promise<BatchEnrichSummary> {
     .is("phone", null)
     .not("website", "is", null)
     .eq("website_scrape_status", "pending");
-
-  // --- Pass 4: AI phone lookup for the long tail ------------------------------
-  // Last resort: only companies where CVR, Krak AND the website scraper all
-  // came up empty. Each call runs web search, so it is slow and costs real
-  // money — hence the low cap, the sleep, and the per-batch usage log below.
-  const ai = await runAiPhonePass(supabase);
 
   const summary: BatchEnrichSummary = {
     processed: total,
@@ -877,7 +948,7 @@ export async function enrichPendingCompanies(): Promise<BatchEnrichSummary> {
       noWebsite: webNoWebsite,
       remaining: webRemaining ?? 0,
     },
-    ai,
+    stoppedOnTime,
   };
   console.log("[cvr] batch summary:", JSON.stringify(summary));
   return summary;

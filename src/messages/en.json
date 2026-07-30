@@ -105,7 +105,9 @@
       "enrichFailureDetail": "Failure reasons: {detail}",
       "fromWebsite": "From website",
       "enrichAllDiscovered": "Found {discovered} websites",
-      "enrichAllWebsite": "Scraped {scraped} websites for contact info"
+      "enrichAllWebsite": "Scraped {scraped} websites for contact info",
+      "enrichAllTimeout": "Enrichment took too long and was aborted. Try again — finished work is saved.",
+      "enrichAllPartial": "Didn't get through the whole queue in time — the rest is picked up next run."
     },
     "krak": {
       "findPhones": "Find phone numbers",
