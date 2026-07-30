@@ -443,6 +443,7 @@ export type Database = {
           note: string | null;
           follow_up_at: string | null;
           in_trash: boolean;
+          deleted_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -458,6 +459,7 @@ export type Database = {
           note?: string | null;
           follow_up_at?: string | null;
           in_trash?: boolean;
+          deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -473,6 +475,7 @@ export type Database = {
           note?: string | null;
           follow_up_at?: string | null;
           in_trash?: boolean;
+          deleted_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };

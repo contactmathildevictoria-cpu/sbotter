@@ -78,7 +78,7 @@ async function readAllAssignments(
   for (let from = 0; ; from += ASSIGNMENT_PAGE) {
     const { data, error } = await supabase
       .from("lead_assignments")
-      .select("id, company_id, status, in_trash, follow_up_at, list_date")
+      .select("id, company_id, status, in_trash, follow_up_at, list_date, deleted_at")
       .eq("user_id", userId)
       // A unique sort key, so offset paging can't skip or repeat a row.
       .order("id", { ascending: true })
@@ -95,6 +95,9 @@ async function readAllAssignments(
         inTrash: row.in_trash,
         followUpAt: row.follow_up_at,
         listDate: row.list_date,
+        // Deleted rows are read on purpose: they keep the company out of the
+        // fresh pool. The planner excludes them from selection.
+        deletedAt: row.deleted_at,
       });
     }
 
@@ -282,6 +285,7 @@ export async function generateDailyList(
       })
       .in("id", ids)
       .eq("user_id", userId)
+      .is("deleted_at", null)
       // Compare-and-swap: a concurrent run that already revived these rows
       // won't match, so neither run double-counts.
       .eq("in_trash", true)

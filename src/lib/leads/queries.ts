@@ -232,6 +232,7 @@ export async function fetchBoardLeads(userId: string): Promise<BoardLead[]> {
        )`,
     )
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .or("in_trash.eq.false,status.eq.no_pickup")
     .order("list_date", { ascending: false })
     .order("created_at", { ascending: false })

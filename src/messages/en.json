@@ -178,6 +178,14 @@
       "foundByAi": "Found automatically by AI — click the icon to see the source",
       "sourceLink": "Phone number found automatically — click to see the source",
       "source": "AI"
+    },
+    "delete": {
+      "action": "Delete lead",
+      "confirmTitle": "Delete this lead?",
+      "confirmBody": "{name} will be removed from your list and never assigned to you again. This can't be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel",
+      "done": "Lead deleted"
     }
   },
   "NotFound": {

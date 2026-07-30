@@ -178,6 +178,14 @@
       "foundByAi": "Fundet automatisk af AI — klik på ikonet for at se kilden",
       "sourceLink": "Telefonnummer fundet automatisk — klik for at se kilden",
       "source": "AI"
+    },
+    "delete": {
+      "action": "Slet lead",
+      "confirmTitle": "Slet dette lead?",
+      "confirmBody": "{name} fjernes fra din liste og bliver ikke tildelt dig igen. Det kan ikke fortrydes.",
+      "confirm": "Slet",
+      "cancel": "Annullér",
+      "done": "Leadet er slettet"
     }
   },
   "NotFound": {

@@ -8,6 +8,7 @@ import {
   CalendarClock,
   ChevronDown,
   Phone,
+  Trash2,
   User,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -18,8 +19,17 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { AiSourceLink } from "@/components/leads/ai-source-link";
 import {
   displayHost,
@@ -52,17 +62,21 @@ export function LeadCard({
   lead,
   todayISO,
   onStatusChange,
+  onDelete,
   pending,
 }: {
   lead: BoardLead;
   /** Computed on the server so the "new today" badge can't hydrate wrong. */
   todayISO: string;
   onStatusChange: (id: string, status: LeadStatus) => void;
+  onDelete: (id: string) => void;
   pending: boolean;
 }) {
   const t = useTranslations("Leads.card");
   const tStatus = useTranslations("Leads.status");
   const tAi = useTranslations("Leads.ai");
+  const tDelete = useTranslations("Leads.delete");
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const company = lead.company;
   const contact = resolveCompanyContact(company ?? {});
@@ -223,9 +237,50 @@ export function LeadCard({
                 {tStatus(status)}
               </DropdownMenuItem>
             ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              // Deleting is permanent — the company never comes back on a
+              // future daily list — so it goes through a confirmation.
+              onSelect={() => setConfirmOpen(true)}
+            >
+              <Trash2 className="size-3.5 shrink-0" />
+              {tDelete("action")}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{tDelete("confirmTitle")}</DialogTitle>
+            <DialogDescription>
+              {tDelete("confirmBody", { name: company?.name ?? "" })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmOpen(false)}
+            >
+              {tDelete("cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={pending}
+              onClick={() => {
+                setConfirmOpen(false);
+                onDelete(lead.id);
+              }}
+            >
+              {tDelete("confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </article>
   );
 }
