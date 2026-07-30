@@ -11,6 +11,10 @@ type ActorInput = {
   searchString?: string;
   maxItems?: number;
   orderType?: string;
+  /** Where to POST the dataset. Overrides SBOTTER_WEBHOOK_URL. */
+  webhookUrl?: string;
+  /** HMAC key for the x-sbotter-signature header. Overrides SBOTTER_WEBHOOK_SECRET. */
+  webhookSecret?: string;
 };
 
 await Actor.init();
@@ -49,11 +53,16 @@ if (mode === "fixture") {
   ]);
 }
 
-// Ship the dataset to the Sbotter webhook if WEBHOOK_URL is configured.
-// This lets us bypass Apify's built-in webhooks entirely and keep signing
-// inside the Actor itself — useful for local apify-cli runs.
-const webhookUrl = process.env.SBOTTER_WEBHOOK_URL;
-const webhookSecret = process.env.SBOTTER_WEBHOOK_SECRET;
+// Ship the dataset to the Sbotter webhook. This bypasses Apify's built-in
+// webhooks entirely and keeps signing inside the Actor — which is also what
+// makes local apify-cli runs work.
+//
+// Input first, then env, matching the Krak enricher. Input-first is what lets
+// the scrape cron (src/lib/scrape.ts) pass the URL and secret per run, so the
+// secret lives only in Vercel and can be rotated there without touching the
+// Actor's saved configuration. The env vars remain the fallback for local runs.
+const webhookUrl = input.webhookUrl ?? process.env.SBOTTER_WEBHOOK_URL;
+const webhookSecret = input.webhookSecret ?? process.env.SBOTTER_WEBHOOK_SECRET;
 
 if (webhookUrl && webhookSecret) {
   const dataset = await Dataset.open();
@@ -82,7 +91,8 @@ if (webhookUrl && webhookSecret) {
   }
 } else {
   log.info(
-    "SBOTTER_WEBHOOK_URL or SBOTTER_WEBHOOK_SECRET not set — skipping webhook.",
+    "No webhook URL/secret in input or env (webhookUrl/webhookSecret, " +
+      "SBOTTER_WEBHOOK_URL/SBOTTER_WEBHOOK_SECRET) — skipping webhook.",
   );
 }
 

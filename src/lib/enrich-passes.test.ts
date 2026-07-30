@@ -99,6 +99,59 @@ describe("the batch stays inside its budget", () => {
   });
 });
 
+describe("the scrape cron is wired and fails soft", () => {
+  const scrape = read("src/lib/scrape.ts");
+  const cron = read("src/app/api/cron/scrape-jobnet/route.ts");
+  const actor = read("apify-actors/jobnet/src/main.ts");
+
+  it("is scheduled before the daily-list cron so lists get fresh data", () => {
+    const paths = vercelJson.crons.map((c) => c.path);
+    expect(paths).toContain("/api/cron/scrape-jobnet");
+
+    const hour = (path: string) => {
+      const cron = vercelJson.crons.find((c) => c.path === path);
+      return Number(cron!.schedule.split(" ")[1]);
+    };
+    expect(hour("/api/cron/scrape-jobnet")).toBeLessThan(hour("/api/cron/daily-list"));
+  });
+
+  it("no-ops instead of throwing when Apify isn't configured yet", () => {
+    // The Actor still has to be pushed; a cron that 500s here would retry and
+    // alert for a deployment step that simply hasn't happened.
+    expect(scrape).toMatch(/reason: "no_actor_id"/);
+    expect(scrape).toMatch(/reason: "no_token"/);
+    expect(scrape).not.toMatch(/throw new Error/);
+  });
+
+  it("posts to the real ingest route", () => {
+    // Not /api/ingest/apify-webhook, which doesn't exist.
+    expect(scrape).toMatch(/\/api\/ingest\/apify`/);
+  });
+
+  it("reads env only through the env module", () => {
+    expect(scrape).not.toMatch(/process\.env/);
+    expect(scrape).toMatch(/env\.jobnetActorId/);
+  });
+
+  it("asks for newest-first so a daily run catches new postings", () => {
+    expect(scrape).toMatch(/orderType: "PublicationDate"/);
+  });
+
+  it("uses the repo's timing-safe cron auth", () => {
+    expect(cron).toMatch(/timingSafeEqual/);
+    expect(cron).toMatch(/env\.cronSecret/);
+  });
+
+  it("passes the webhook in input, which the Actor now reads first", () => {
+    // The Actor used to read the webhook from env vars only, so an input-only
+    // cron would have started runs that silently never delivered.
+    expect(scrape).toMatch(/webhookUrl:/);
+    expect(scrape).toMatch(/webhookSecret:/);
+    expect(actor).toMatch(/input\.webhookUrl \?\? process\.env\.SBOTTER_WEBHOOK_URL/);
+    expect(actor).toMatch(/input\.webhookSecret \?\? process\.env\.SBOTTER_WEBHOOK_SECRET/);
+  });
+});
+
 describe("the enrich-all button can't strand its spinner", () => {
   const button = read("src/components/leads/enrich-all-button.tsx");
 

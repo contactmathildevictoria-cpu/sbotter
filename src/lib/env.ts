@@ -41,6 +41,12 @@ export const env = {
     // Required to start a "Find phone numbers" run; optional so the app boots.
     return optional(process.env.KRAK_ENRICHER_ACTOR_ID);
   },
+  get jobnetActorId() {
+    // Apify Actor id (user~actor-name or the 17-char id) for the Jobnet
+    // scraper. Optional: the scrape cron no-ops with a log line when it's
+    // unset, so the app boots and deploys before the Actor is pushed.
+    return optional(process.env.JOBNET_ACTOR_ID);
+  },
   get apifyWebhookSecret() {
     return required("APIFY_WEBHOOK_SECRET", process.env.APIFY_WEBHOOK_SECRET);
   },
