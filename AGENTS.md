@@ -65,6 +65,20 @@ The leads dashboard encodes its filter state in URL search params (`q`, `city`, 
 - `apify.ts` — the upsert pipeline. Dedups companies by `cvr ?? domain ?? slug`. Upserts job postings by `(source_id, external_id)`. Marks job postings absent from the current run as `is_active = false`. Records counts in `scrape_runs`.
 - `route.ts` (the webhook) — accepts EITHER an HMAC-SHA256 signature in `x-sbotter-signature` (verified against `APIFY_WEBHOOK_SECRET`; used by our Actor + local tests) OR a static `Authorization: Bearer <token>` matching `APIFY_WEBHOOK_TOKEN` (used by Apify's native webhooks, which can't compute the HMAC). NEVER touch the request body before verifying.
 
+### CVR enrichment (`src/lib/cvrlookup*.ts`, `src/lib/cvr.ts`)
+
+The provider is **cvrlookup.dk** (`CVRLOOKUP_API_KEY`), which replaced cvrapi.dk and its 50/day cap. Quota is monthly, plus a per-minute limit.
+
+- `cvrlookup-core.ts` — pure mapping, name matching and the coalesce rule. No I/O, so it's unit-tested.
+- `cvrlookup.ts` — transport: auth, rate-limit pacing, 429 retry, batch. Field names come from the provider's OpenAPI doc at `https://cvrlookup.dk/openapi.json`; re-verify with `node scripts/probe-cvrlookup.mjs`.
+- `cvr.ts` — the enrichment passes and everything that writes to Supabase.
+
+Three rules that are easy to break by accident:
+
+- **Direktion only, name + title only.** The provider returns `boardMembers[]` with each person's **private home address**. `toDirectors()` rebuilds every entry from an allowlist so the address cannot reach the database or a log line. Do not rewrite it as a spread-minus-address, do not widen `CvrDirector`, and do not store bestyrelse or suppleanter.
+- **Coalesce, never overwrite.** `buildCvrUpdate()` writes a column only when it is currently null. The two not-null booleans (`is_ad_protected`, `is_bankrupt`) may flip false → true only.
+- **Stamp `cvr_last_fetched_at` on every attempt**, hit or miss, or the pass re-requests the same companies every run and burns the monthly quota. It's left alone only when the provider blocked us and nothing was learned.
+
 ### Plans
 
 `src/lib/plans.ts` defines `PLAN_LIMITS` for `free` / `pro` / `enterprise`. The `profiles.plan` column exists today but is not enforced. When adding gates, import `PLAN_LIMITS[user.plan].<limit>` rather than hard-coding values.

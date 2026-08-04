@@ -10,6 +10,7 @@ const EMPTY = {
   phone: null,
   email: null,
   contact_person_name: null,
+  cvr_directors: null,
   website_phone: null,
   website_email: null,
   website_contact_person: null,
@@ -23,6 +24,73 @@ const EMPTY = {
 };
 
 const AI_SOURCE = "https://www.proff.dk/firma/eksempel-aps/12345678";
+
+describe("resolveCompanyContact — direktion from CVR", () => {
+  it("shows the director's name and title", () => {
+    const c = resolveCompanyContact({
+      ...EMPTY,
+      cvr_directors: [{ name: "Maziar Doustdar", title: "ADM. DIR." }],
+    });
+    expect(c.contactName).toBe("Maziar Doustdar");
+    expect(c.contactTitle).toBe("ADM. DIR.");
+    expect(c.contactSource).toBe("cvr");
+    expect(c.hasAny).toBe(true);
+  });
+
+  it("prefers the director over the older bare contact_person_name", () => {
+    const c = resolveCompanyContact({
+      ...EMPTY,
+      contact_person_name: "Gammelt Navn",
+      cvr_directors: [{ name: "Maziar Doustdar", title: "ADM. DIR." }],
+    });
+    expect(c.contactName).toBe("Maziar Doustdar");
+    expect(c.contactTitle).toBe("ADM. DIR.");
+  });
+
+  it("falls back to contact_person_name when there is no direktion", () => {
+    const c = resolveCompanyContact({
+      ...EMPTY,
+      contact_person_name: "Mette Hansen",
+      cvr_directors: [],
+    });
+    expect(c.contactName).toBe("Mette Hansen");
+    expect(c.contactSource).toBe("cvr");
+    // The bare column carries no title.
+    expect(c.contactTitle).toBeNull();
+  });
+
+  it("still outranks website and Krak contacts", () => {
+    const c = resolveCompanyContact({
+      ...EMPTY,
+      cvr_directors: [{ name: "Direktør", title: "DIREKTØR" }],
+      website_contact_person: "Web Person",
+      krak_contact_person: "Krak Person",
+    });
+    expect(c.contactName).toBe("Direktør");
+    expect(c.contactSource).toBe("cvr");
+  });
+
+  it("uses a website contact when the direktion is empty", () => {
+    const c = resolveCompanyContact({
+      ...EMPTY,
+      cvr_directors: [],
+      website_contact_person: "Web Person",
+      website_contact_title: "Salgschef",
+    });
+    expect(c.contactName).toBe("Web Person");
+    expect(c.contactTitle).toBe("Salgschef");
+    expect(c.contactSource).toBe("website");
+  });
+
+  it("handles a director with no title", () => {
+    const c = resolveCompanyContact({
+      ...EMPTY,
+      cvr_directors: [{ name: "Uden Titel", title: null }],
+    });
+    expect(c.contactName).toBe("Uden Titel");
+    expect(c.contactTitle).toBeNull();
+  });
+});
 
 describe("resolveCompanyContact", () => {
   it("prefers CVR over website and Krak", () => {

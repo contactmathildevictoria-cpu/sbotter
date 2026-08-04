@@ -104,7 +104,7 @@
       "enrichAllRunning": "Enriching…",
       "enrichAllDone": "Enriched {enriched}, {failed} failed, {remaining} remaining",
       "enrichAllError": "Enrichment failed. Try again.",
-      "enrichQuota": "CVR daily quota exceeded (50/day). Set CVRAPI_TOKEN to remove the limit.",
+      "enrichQuota": "CVR lookups are blocked — the monthly quota is spent, or the API key was rejected. The rest is picked up next run.",
       "enrichFailureDetail": "Failure reasons: {detail}",
       "fromWebsite": "From website",
       "enrichAllDiscovered": "Found {discovered} websites",

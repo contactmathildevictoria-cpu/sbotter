@@ -62,8 +62,16 @@ export const env = {
     return optional(process.env.APIFY_WEBHOOK_TOKEN);
   },
   get cvrApiToken() {
-    // Optional. Removes the 50/day cvrapi.dk rate limit (HTTP Basic auth).
+    // Legacy: cvrapi.dk's token. The CVR enrichment pass now runs on
+    // cvrlookup.dk (see cvrLookupApiKey) and no longer reads this. Kept so
+    // deployments that still set it don't break; safe to delete from Vercel.
     return optional(process.env.CVRAPI_TOKEN);
+  },
+  get cvrLookupApiKey() {
+    // cvrlookup.dk API key ("cvr_..."), sent as a Bearer token. Optional so the
+    // app boots without it: the CVR pass logs and skips instead of failing the
+    // whole enrichment batch.
+    return optional(process.env.CVRLOOKUP_API_KEY);
   },
   get anthropicApiKey() {
     // Optional: Pass 4 (AI phone lookup) logs and skips when it's missing,
