@@ -62,6 +62,8 @@
       "updated": "Updated: {time}",
       "updatedNever": "No data ingested yet",
       "updatedStaleHint": "No new job postings have arrived in over 48 hours — check whether the scraper is running",
+      "enriched": "{enriched} of {total} enriched",
+      "enrichedQueued": "{remaining} queued",
       "pageSize": "Page size",
       "perPageN": "{n} per page",
       "perPageAll": "All",

@@ -9,6 +9,7 @@ import {
   fetchActiveDataSources,
   fetchCompanies,
   fetchDistinctCities,
+  fetchEnrichmentProgress,
   fetchLatestJobPostingAt,
 } from "@/lib/leads/queries";
 import { formatRelativeDate, isDataStale } from "@/lib/format";
@@ -27,11 +28,12 @@ export default async function CompaniesPage({
   const filters = parseFiltersFromSearchParams(sp);
   const t = await getTranslations("Leads");
 
-  const [page, cities, sources, latestJobAt] = await Promise.all([
+  const [page, cities, sources, latestJobAt, enrichment] = await Promise.all([
     fetchCompanies(filters),
     fetchDistinctCities(),
     fetchActiveDataSources(),
     fetchLatestJobPostingAt(),
+    fetchEnrichmentProgress(),
   ]);
 
   // Formatted here rather than in the client toolbar: a relative time computed
@@ -49,7 +51,11 @@ export default async function CompaniesPage({
           <EmptyState title={t("emptyTitle")} body={t("emptyBody")} />
         ) : (
           <>
-            <ResultsToolbar total={page.total} freshness={freshness} />
+            <ResultsToolbar
+              total={page.total}
+              freshness={freshness}
+              enrichment={enrichment}
+            />
             <CompaniesTable page={page} />
             {filters.perPage !== "all" ? (
               <Pagination

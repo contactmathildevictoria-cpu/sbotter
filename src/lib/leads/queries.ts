@@ -180,6 +180,49 @@ export async function fetchLatestJobPostingAt(): Promise<string | null> {
   return data?.created_at ?? null;
 }
 
+/** How far CVR enrichment has got, across all companies (filters don't apply). */
+export type EnrichmentProgress = {
+  /** Companies with CVR data on them. */
+  enriched: number;
+  /** Every company in the database. */
+  total: number;
+  /**
+   * Still queued: 'pending' or 'failed'. Not simply `total - enriched` —
+   * 'no_match' and 'skipped' companies are finished, just without data, and
+   * counting them as outstanding would make the queue look permanently stuck.
+   */
+  remaining: number;
+};
+
+/**
+ * Progress of the CVR enrichment queue, for the leads toolbar.
+ *
+ * Three head-only counts (no rows transferred). Exists so the queue can be
+ * watched from the UI while it drains over hours, instead of by running SQL.
+ * Returns zeroes rather than throwing — a broken counter must never take the
+ * leads page down with it.
+ */
+export async function fetchEnrichmentProgress(): Promise<EnrichmentProgress> {
+  const supabase = await createSupabaseServerClient();
+  const [totalRes, enrichedRes, remainingRes] = await Promise.all([
+    supabase.from("companies").select("id", { count: "exact", head: true }),
+    supabase
+      .from("companies")
+      .select("id", { count: "exact", head: true })
+      .eq("cvr_enrichment_status", "enriched"),
+    supabase
+      .from("companies")
+      .select("id", { count: "exact", head: true })
+      .in("cvr_enrichment_status", ["pending", "failed"]),
+  ]);
+
+  return {
+    total: totalRes.count ?? 0,
+    enriched: enrichedRes.count ?? 0,
+    remaining: remainingRes.count ?? 0,
+  };
+}
+
 // ============================================================
 // Daily list / CRM board
 // ============================================================
