@@ -34,8 +34,8 @@ const HEADERS = [
 
 // GET /api/companies/export?<same filter params as the leads page>
 // Streams ALL matching companies (not just the current page) as CSV.
-// Phone/email/contact use the same CVR → website → Krak → AI cascade as the
-// table, including the AI provenance columns.
+// Phone/email/contact use the same CVR → website → AI cascade as the table,
+// including the AI provenance columns.
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
   const {

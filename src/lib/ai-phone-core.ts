@@ -200,10 +200,9 @@ export function countWebSearches(
   return n;
 }
 
-/** The phone columns of the three trusted layers. */
+/** The phone columns of the trusted layers. */
 export type TrustedPhoneColumns = {
   phone: string | null;
-  krak_phone: string | null;
   website_phone: string | null;
 };
 
@@ -214,17 +213,16 @@ export type AiWriteDecision =
 /**
  * FILL-EMPTY-ONLY. Decides whether an AI result may be written.
  *
- * A company that has gained a phone from CVR, Krak or the website scraper since
- * the batch selected it is retired as `skipped` — the AI number is discarded,
- * not stored as a lower-priority alternative. This is the second of the two
- * guards; the batch query is the first.
+ * A company that has gained a phone from CVR or the website scraper since the
+ * batch selected it is retired as `skipped` — the AI number is discarded, not
+ * stored as a lower-priority alternative. This is the second of the two guards;
+ * the batch query is the first.
  */
 export function decideAiWrite(
   company: TrustedPhoneColumns,
   result: AiPhoneResult | null,
 ): AiWriteDecision {
-  const hasTrustedPhone =
-    Boolean(company.phone) || Boolean(company.krak_phone) || Boolean(company.website_phone);
+  const hasTrustedPhone = Boolean(company.phone) || Boolean(company.website_phone);
 
   if (hasTrustedPhone) return { store: false, status: "skipped" };
   if (!result) return { store: false, status: "no_match" };

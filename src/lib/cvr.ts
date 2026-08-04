@@ -538,8 +538,8 @@ export type AiPassSummary = {
  * Pass 4 — AI phone lookup for companies no other layer could reach.
  *
  * Independently callable: the enrichment batch no longer runs it, and
- * /api/cron/ai-phone calls only this. Selects only rows where phone, krak_phone
- * AND website_phone are all null and the AI lookup hasn't been tried. A no-op
+ * /api/cron/ai-phone calls only this. Selects only rows where phone AND
+ * website_phone are both null and the AI lookup hasn't been tried. A no-op
  * with a log line when the layer is switched off or no API key is configured.
  *
  * Since the AI cron was unscheduled this only runs when someone invokes
@@ -588,13 +588,12 @@ export async function runAiPhonePass(
     .from("companies")
     .update({ ai_enrichment_status: "skipped" })
     .eq("ai_enrichment_status", "pending")
-    .or("phone.not.is.null,krak_phone.not.is.null,website_phone.not.is.null");
+    .or("phone.not.is.null,website_phone.not.is.null");
 
   const { data: needsAi } = await supabase
     .from("companies")
     .select("id, name, location_city, website")
     .is("phone", null)
-    .is("krak_phone", null)
     .is("website_phone", null)
     .eq("ai_enrichment_status", "pending")
     .order("created_at", { ascending: true })
@@ -654,7 +653,6 @@ export async function runAiPhonePass(
     .from("companies")
     .select("id", { count: "exact", head: true })
     .is("phone", null)
-    .is("krak_phone", null)
     .is("website_phone", null)
     .eq("ai_enrichment_status", "pending");
 
@@ -904,13 +902,13 @@ export async function enrichPendingCompanies(
   // The website passes below run regardless of CVR's outcome (quota included),
   // so a blocked CVR never stalls website discovery or scraping.
 
-  // Retire companies that already have a phone (CVR or Krak) from the website
-  // queue — no scrape needed.
+  // Retire companies that already have a CVR phone from the website queue — no
+  // scrape needed.
   await supabase
     .from("companies")
     .update({ website_scrape_status: "skipped" })
     .eq("website_scrape_status", "pending")
-    .or("phone.not.is.null,krak_phone.not.is.null");
+    .not("phone", "is", null);
 
   // --- Pass 2: discover a website for companies that have none ----------------
   // CVR-independent: tries the email domain, then external URLs in the job

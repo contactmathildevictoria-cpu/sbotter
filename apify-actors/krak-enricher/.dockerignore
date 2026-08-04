@@ -1,6 +1,0 @@
-node_modules
-dist
-storage
-.actor/dist
-*.log
-recon.mjs

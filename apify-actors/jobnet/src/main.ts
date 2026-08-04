@@ -57,7 +57,7 @@ if (mode === "fixture") {
 // webhooks entirely and keeps signing inside the Actor — which is also what
 // makes local apify-cli runs work.
 //
-// Input first, then env, matching the Krak enricher. Input-first is what lets
+// Input first, then env. Input-first is what lets
 // the scrape cron (src/lib/scrape.ts) pass the URL and secret per run, so the
 // secret lives only in Vercel and can be rotated there without touching the
 // Actor's saved configuration. The env vars remain the fallback for local runs.

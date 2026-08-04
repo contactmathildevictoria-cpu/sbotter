@@ -112,15 +112,6 @@
       "enrichAllTimeout": "Enrichment took too long and was aborted. Try again — finished work is saved.",
       "enrichAllPartial": "Didn't get through the whole queue in time — the rest is picked up next run."
     },
-    "krak": {
-      "findPhones": "Find phone numbers",
-      "findPhonesRunning": "Starting…",
-      "findPhonesStarted": "Started lookup for {started} companies — results arrive shortly",
-      "findPhonesNone": "No companies are missing a phone number",
-      "findPhonesError": "Couldn't start lookup. Try again.",
-      "source": "Krak",
-      "sourceKrak": "From Krak.dk"
-    },
     "pagination": {
       "next": "Next",
       "prev": "Previous",

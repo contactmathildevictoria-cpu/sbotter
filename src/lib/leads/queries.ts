@@ -207,9 +207,6 @@ export type BoardCompany = Pick<
   | "website_email"
   | "website_contact_person"
   | "website_contact_title"
-  | "krak_phone"
-  | "krak_contact_person"
-  | "krak_contact_title"
   | "ai_phone"
   | "ai_contact_person"
   | "ai_source_url"
@@ -250,7 +247,6 @@ export async function fetchBoardLeads(userId: string): Promise<BoardLead[]> {
          cvr_industry_text, open_jobs_count,
          phone, email, contact_person_name, cvr_directors,
          website_phone, website_email, website_contact_person, website_contact_title,
-         krak_phone, krak_contact_person, krak_contact_title,
          ai_phone, ai_contact_person, ai_source_url
        )`,
     )

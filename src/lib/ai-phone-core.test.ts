@@ -185,7 +185,7 @@ describe("decideAiWrite — fill-empty-only", () => {
     contactPerson: null,
     sourceUrl: GOOD.sourceUrl,
   };
-  const empty = { phone: null, krak_phone: null, website_phone: null };
+  const empty = { phone: null, website_phone: null };
 
   it("stores when no trusted layer has a phone", () => {
     expect(decideAiWrite(empty, result)).toEqual({ store: true, status: "enriched" });
@@ -193,11 +193,6 @@ describe("decideAiWrite — fill-empty-only", () => {
 
   it("never overwrites a CVR phone", () => {
     expect(decideAiWrite({ ...empty, phone: "12345678" }, result))
-      .toEqual({ store: false, status: "skipped" });
-  });
-
-  it("never overwrites a Krak phone", () => {
-    expect(decideAiWrite({ ...empty, krak_phone: "12345678" }, result))
       .toEqual({ store: false, status: "skipped" });
   });
 

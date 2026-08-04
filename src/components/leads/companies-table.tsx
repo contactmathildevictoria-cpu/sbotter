@@ -18,6 +18,7 @@ import {
   telHref,
   websiteHref,
 } from "@/lib/leads/contact";
+import { isCompanyEnriching } from "@/lib/leads/enrich-state";
 import { formatRelativeDate } from "@/lib/format";
 
 // Colored dot per enrichment status, for the debug Status column.
@@ -62,7 +63,6 @@ function SourceTag({ label, title }: { label: string; title: string }) {
 export async function CompaniesTable({ page }: { page: CompaniesPage }) {
   const t = await getTranslations("Leads.columns");
   const tEnrich = await getTranslations("Leads.enrich");
-  const tKrak = await getTranslations("Leads.krak");
   const tAi = await getTranslations("Leads.ai");
 
   return (
@@ -83,7 +83,7 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
         </TableHeader>
         <TableBody>
           {page.rows.map((row) => {
-            // Per-field cascade: CVR → website (scraper) → Krak. A small tag
+            // Per-field cascade: CVR → website (scraper) → AI. A small tag
             // marks which fallback a value came from; CVR-sourced values get
             // no tag, since that's the canonical source.
             const {
@@ -145,11 +145,6 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                         {phone}
                         {phoneSource === "website" ? (
                           <SourceTag label="Web" title={tEnrich("fromWebsite")} />
-                        ) : phoneSource === "krak" ? (
-                          <SourceTag
-                            label={tKrak("source")}
-                            title={tKrak("sourceKrak")}
-                          />
                         ) : phoneSource === "ai" ? (
                           <SourceTag label="AI" title={tAi("foundByAi")} />
                         ) : null}
@@ -195,11 +190,6 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                       ) : null}
                       {contactSource === "website" ? (
                         <SourceTag label="Web" title={tEnrich("fromWebsite")} />
-                      ) : contactSource === "krak" ? (
-                        <SourceTag
-                          label={tKrak("source")}
-                          title={tKrak("sourceKrak")}
-                        />
                       ) : contactSource === "ai" ? (
                         <SourceTag label="AI" title={tAi("foundByAi")} />
                       ) : null}
@@ -211,7 +201,7 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                     <EnrichStatus
                       companyId={row.id}
                       status={row.cvr_enrichment_status}
-                      krakStatus={row.krak_enrichment_status}
+                      running={isCompanyEnriching(row)}
                     />
                   ) : (
                     <span className="text-muted-foreground">—</span>
@@ -224,10 +214,6 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                     <StatusLine
                       label="Web"
                       status={row.website_scrape_status}
-                    />
-                    <StatusLine
-                      label="Krak"
-                      status={row.krak_enrichment_status}
                     />
                   </div>
                 </TableCell>
