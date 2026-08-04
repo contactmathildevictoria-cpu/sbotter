@@ -6,32 +6,51 @@ import { useTranslations } from "next-intl";
 import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import type { CvrEnrichmentStatus } from "@/types/database";
+import type {
+  CvrEnrichmentStatus,
+  KrakEnrichmentStatus,
+} from "@/types/database";
 
-// Shows the CVR-enrichment state for a company: a subtle spinner while pending,
-// or a retry button for failed / no-match rows. Renders nothing once enriched.
+const Dash = () => <span className="text-muted-foreground">—</span>;
+
+/**
+ * The contact-column affordance for a company we have no contact data for.
+ *
+ * A spinner here means "a job is running right now", and nothing else. It used
+ * to be shown for `cvr_enrichment_status === "pending"`, which is not a
+ * running job — it is "never attempted", the state most rows sit in forever.
+ * That is what made "Henter data…" appear on every empty row and never
+ * resolve. `queued` on the Krak pass is the only genuine in-flight state in
+ * the schema: an Apify run has been started and results are on their way back.
+ *
+ * Everything else renders an em dash, except failed / no-match CVR rows, which
+ * keep their label and retry button — those are outcomes, not loading states.
+ */
 export function EnrichStatus({
   companyId,
   status,
+  krakStatus,
 }: {
   companyId: string;
   status: CvrEnrichmentStatus;
+  krakStatus: KrakEnrichmentStatus;
 }) {
   const t = useTranslations("Leads.enrich");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [busy, setBusy] = useState(false);
 
-  if (status === "enriched" || status === "skipped") return null;
-
-  if (status === "pending" && !busy) {
+  if (krakStatus === "queued" && !busy) {
     return (
       <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
         <Loader2 className="size-3 animate-spin" />
-        {t("pending")}
+        {t("running")}
       </span>
     );
   }
+
+  // Not attempted yet, or attempted and simply came up empty.
+  if (status !== "failed" && status !== "no_match" && !busy) return <Dash />;
 
   async function retry() {
     setBusy(true);

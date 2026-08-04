@@ -203,6 +203,7 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                     <EnrichStatus
                       companyId={row.id}
                       status={row.cvr_enrichment_status}
+                      krakStatus={row.krak_enrichment_status}
                     />
                   ) : (
                     <span className="text-muted-foreground">—</span>

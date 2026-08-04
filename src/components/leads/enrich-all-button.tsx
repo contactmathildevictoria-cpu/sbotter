@@ -16,7 +16,18 @@ type BatchSummary = {
   failureReasons?: Record<string, number>;
   discovery?: { processed: number; discovered: number };
   website?: { processed: number; scraped: number };
+  stoppedOnTime?: boolean;
 };
+
+/**
+ * Client-side ceiling, just above the server's 200s budget.
+ *
+ * The server is bounded too, but a request can still fail to settle — a killed
+ * function or a dropped connection leaves fetch pending forever, which is what
+ * used to strand the spinner. An abort turns that into a rejection, so the
+ * finally below always runs.
+ */
+const REQUEST_TIMEOUT_MS = 240_000;
 
 export function EnrichAllButton() {
   const t = useTranslations("Leads.enrich");
@@ -27,7 +38,10 @@ export function EnrichAllButton() {
   async function run() {
     setRunning(true);
     try {
-      const res = await fetch("/api/companies/enrich-batch", { method: "POST" });
+      const res = await fetch("/api/companies/enrich-batch", {
+        method: "POST",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const s = (await res.json()) as BatchSummary;
       toast.success(
@@ -55,9 +69,14 @@ export function EnrichAllButton() {
       if (s.website && s.website.processed > 0) {
         toast.success(t("enrichAllWebsite", { scraped: s.website.scraped }));
       }
+      // Not an error: the batch ran out of time and the rest stays queued.
+      if (s.stoppedOnTime) {
+        toast.info(t("enrichAllPartial"));
+      }
       startTransition(() => router.refresh());
-    } catch {
-      toast.error(t("enrichAllError"));
+    } catch (err) {
+      const timedOut = err instanceof DOMException && err.name === "TimeoutError";
+      toast.error(timedOut ? t("enrichAllTimeout") : t("enrichAllError"));
     } finally {
       setRunning(false);
     }

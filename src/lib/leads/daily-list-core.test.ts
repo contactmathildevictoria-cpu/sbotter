@@ -58,6 +58,7 @@ function makeAssignment(
     inTrash: false,
     followUpAt: null,
     listDate: TODAY,
+    deletedAt: null,
     ...over,
   };
 }
@@ -104,6 +105,7 @@ function applyPlan(
     inTrash: false,
     followUpAt: null,
     listDate: row.list_date,
+    deletedAt: null,
   }));
   return [...updated, ...inserted];
 }
@@ -208,6 +210,132 @@ describe("isEligibleCandidate", () => {
     expect(
       isEligibleCandidate(makeCandidate({ domain: "arla.dk" }), byDomain),
     ).toBe(false);
+  });
+});
+
+// ============================================================
+// Deleted leads
+// ============================================================
+// A deleted lead is handled asymmetrically, and each half matters:
+//   * still "already assigned" → the company is never handed out again
+//   * not unworked             → deletions don't suppress the daily top-up
+//   * never recycled or fill   → it can't come back out of the trash
+describe("deleted leads", () => {
+  const deleted = (over: Partial<ExistingAssignment> = {}) =>
+    makeAssignment({ deletedAt: "2026-07-28T10:00:00.000Z", ...over });
+
+  it("keeps the company out of the fresh pool forever", () => {
+    // The reason delete is a soft delete: the row is what holds the
+    // (user_id, company_id) pair, so the engine can't re-offer it.
+    const ctx = buildEligibilityContext(
+      [deleted({ companyId: "c-1" })],
+      NO_EXCLUSIONS,
+    );
+    expect(isEligibleCandidate(makeCandidate({ id: "c-1" }), ctx)).toBe(false);
+  });
+
+  it("never re-assigns a deleted company through a full plan", () => {
+    const plan = planDailyList(
+      makeInput({
+        existing: [deleted({ companyId: "c-000" })],
+        candidates: makeCandidates(200),
+      }),
+    );
+    expect(plan.inserts.map((r) => r.company_id)).not.toContain("c-000");
+    expect(plan.inserts).toHaveLength(50);
+  });
+
+  it("does not count as unworked, so it can't starve the top-up", () => {
+    // 50 deleted leads must not read as a full board — otherwise deleting
+    // everything would silently stop new leads arriving.
+    const existing = Array.from({ length: 50 }, (_, i) =>
+      deleted({ id: `d-${i}`, companyId: `del-${i}` }),
+    );
+    const plan = planDailyList(
+      makeInput({ existing, candidates: makeCandidates(200) }),
+    );
+    expect(plan.summary.unworkedBefore).toBe(0);
+    expect(plan.summary.deficit).toBe(50);
+    expect(plan.summary.fresh).toBe(50);
+  });
+
+  it("counts live leads but not deleted ones", () => {
+    const existing = [
+      ...Array.from({ length: 20 }, (_, i) =>
+        makeAssignment({ id: `live-${i}`, companyId: `l-${i}` }),
+      ),
+      ...Array.from({ length: 15 }, (_, i) =>
+        deleted({ id: `gone-${i}`, companyId: `g-${i}` }),
+      ),
+    ];
+    const plan = planDailyList(
+      makeInput({ existing, candidates: makeCandidates(200) }),
+    );
+    expect(plan.summary.unworkedBefore).toBe(20);
+    expect(plan.summary.deficit).toBe(30);
+  });
+
+  it("is never recycled, even when its follow-up is due", () => {
+    // A lead deleted while sitting in the trash with a due follow-up is the
+    // exact case that would resurrect it.
+    const existing = [
+      deleted({
+        id: "t-1",
+        companyId: "tc-1",
+        inTrash: true,
+        status: "no_pickup",
+        followUpAt: "2026-07-01",
+      }),
+    ];
+    const plan = planDailyList(
+      makeInput({ existing, candidates: makeCandidates(5) }),
+    );
+    expect(plan.summary.recycled).toBe(0);
+    expect(plan.revives).toHaveLength(0);
+  });
+
+  it("is never used as fill on a thin scrape day", () => {
+    // With an empty candidate pool, fill would otherwise reach for any trashed
+    // row it can find — including deleted ones.
+    const existing = Array.from({ length: 20 }, (_, i) =>
+      deleted({
+        id: `t-${i}`,
+        companyId: `tc-${i}`,
+        inTrash: true,
+        status: "no_pickup",
+        followUpAt: null,
+      }),
+    );
+    const plan = planDailyList(
+      makeInput({ existing, candidates: makeCandidates(0) }),
+    );
+    expect(plan.summary.fill).toBe(0);
+    expect(plan.summary.total).toBe(0);
+  });
+
+  it("still recycles live trashed leads alongside deleted ones", () => {
+    // The exclusion must be precise: deleting one lead can't stop another
+    // from coming back.
+    const existing = [
+      deleted({
+        id: "gone",
+        companyId: "g-1",
+        inTrash: true,
+        followUpAt: "2026-07-01",
+      }),
+      makeAssignment({
+        id: "live",
+        companyId: "l-1",
+        inTrash: true,
+        status: "no_pickup",
+        followUpAt: "2026-07-01",
+      }),
+    ];
+    const plan = planDailyList(
+      makeInput({ existing, candidates: makeCandidates(0) }),
+    );
+    expect(plan.summary.recycled).toBe(1);
+    expect(plan.revives.map((r) => r.id)).toEqual(["live"]);
   });
 });
 

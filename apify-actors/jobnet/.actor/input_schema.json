@@ -8,7 +8,10 @@
       "type": "string",
       "description": "fixture = push the bundled sample-items.json (for local testing). scrape = pull live ads from Jobnet.dk's BFF search API.",
       "editor": "select",
-      "enum": ["fixture", "scrape"],
+      "enum": [
+        "fixture",
+        "scrape"
+      ],
       "default": "fixture"
     },
     "searchString": {
@@ -31,8 +34,24 @@
       "type": "string",
       "description": "Jobnet sort order for results.",
       "editor": "select",
-      "enum": ["BestMatch", "PublicationDate"],
+      "enum": [
+        "BestMatch",
+        "PublicationDate"
+      ],
       "default": "BestMatch"
+    },
+    "webhookUrl": {
+      "title": "Webhook URL",
+      "type": "string",
+      "description": "Where to POST the scraped dataset. Overrides the SBOTTER_WEBHOOK_URL env var. Set by the scrape cron so the secret lives only in Vercel.",
+      "editor": "textfield"
+    },
+    "webhookSecret": {
+      "title": "Webhook secret",
+      "type": "string",
+      "description": "HMAC-SHA256 key for the x-sbotter-signature header. Overrides SBOTTER_WEBHOOK_SECRET.",
+      "editor": "textfield",
+      "isSecret": true
     }
   }
 }

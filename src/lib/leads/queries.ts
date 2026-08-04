@@ -158,6 +158,28 @@ export async function fetchDistinctCities(): Promise<string[]> {
   return Array.from(cities);
 }
 
+/**
+ * When the ingest pipeline last delivered a job posting.
+ *
+ * `created_at` rather than `posted_at`: we want to know when OUR pipeline last
+ * ran, not when the employer published. A source that keeps re-serving old
+ * listings would still move this forward, which is correct — data arrived.
+ *
+ * Returns null when the table is empty or the query fails; the caller renders
+ * that as stale rather than hiding it, so a broken pipeline can't look healthy.
+ */
+export async function fetchLatestJobPostingAt(): Promise<string | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("job_postings")
+    .select("created_at")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return null;
+  return data?.created_at ?? null;
+}
+
 // ============================================================
 // Daily list / CRM board
 // ============================================================
@@ -232,6 +254,7 @@ export async function fetchBoardLeads(userId: string): Promise<BoardLead[]> {
        )`,
     )
     .eq("user_id", userId)
+    .is("deleted_at", null)
     .or("in_trash.eq.false,status.eq.no_pickup")
     .order("list_date", { ascending: false })
     .order("created_at", { ascending: false })

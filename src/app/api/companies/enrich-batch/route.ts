@@ -8,8 +8,24 @@ export const dynamic = "force-dynamic";
 // CVR is rate-limited to 1 call/sec; a 200-row batch can take a few minutes.
 export const maxDuration = 300;
 
+/**
+ * Wall-clock budget for the batch, 100s inside maxDuration.
+ *
+ * This endpoint backs an interactive button, so it must always return a
+ * response. The passes stop between companies once the budget is spent and
+ * report `stoppedOnTime`; whatever wasn't reached stays queued for the next run.
+ */
+const BUDGET_MS = 200_000;
+
 // POST /api/companies/enrich-batch
-// Enriches pending/failed companies in a batch (40, or 200 with CVRAPI_TOKEN).
+// Runs the three FAST passes (CVR, website discovery, website scrape) on
+// pending/failed companies — 40, or 200 with CVRAPI_TOKEN.
+//
+// The AI phone lookup is deliberately NOT run here: one lookup can take ~40s,
+// and a batch of them used to push this past maxDuration, so the request never
+// returned cleanly and the button's spinner never reset. It runs on its own
+// schedule at /api/cron/ai-phone.
+//
 // Auth: a logged-in user, OR Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>.
 export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
@@ -26,7 +42,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const summary = await enrichPendingCompanies();
+    const summary = await enrichPendingCompanies({ budgetMs: BUDGET_MS });
     return NextResponse.json({ ok: true, ...summary });
   } catch (err) {
     console.error("[cvr] enrich-batch failed:", err);

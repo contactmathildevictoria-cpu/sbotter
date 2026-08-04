@@ -53,13 +53,24 @@ function getClient(apiKey: string): Anthropic {
 /**
  * Looks up a company's phone number with an LLM that can search the web.
  *
- * Returns null when the key is unset, the call fails, the model reports
- * nothing, or what it reported fails validation (no source URL, or not a
- * plausible Danish number).
+ * Returns null when the layer is switched off, the key is unset, the call
+ * fails, the model reports nothing, or what it reported fails validation (no
+ * source URL, or not a plausible Danish number).
+ *
+ * This is the single choke point for the Anthropic API in this repo: nothing
+ * else calls it, so the ENABLE_AI_ENRICHMENT guard below is enough to
+ * guarantee no billed request leaves the app.
  */
 export async function findPhoneViaAI(
   company: AiPhoneCompany,
 ): Promise<AiLookup | null> {
+  if (!env.enableAiEnrichment) {
+    console.log(
+      `[ai] lookup skipped for ${company.name} — ENABLE_AI_ENRICHMENT is off`,
+    );
+    return null;
+  }
+
   const apiKey = env.anthropicApiKey;
   if (!apiKey) return null;
 

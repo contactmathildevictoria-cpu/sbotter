@@ -9,7 +9,9 @@ import {
   fetchActiveDataSources,
   fetchCompanies,
   fetchDistinctCities,
+  fetchLatestJobPostingAt,
 } from "@/lib/leads/queries";
+import { formatRelativeDate, isDataStale } from "@/lib/format";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -25,11 +27,19 @@ export default async function CompaniesPage({
   const filters = parseFiltersFromSearchParams(sp);
   const t = await getTranslations("Leads");
 
-  const [page, cities, sources] = await Promise.all([
+  const [page, cities, sources, latestJobAt] = await Promise.all([
     fetchCompanies(filters),
     fetchDistinctCities(),
     fetchActiveDataSources(),
+    fetchLatestJobPostingAt(),
   ]);
+
+  // Formatted here rather than in the client toolbar: a relative time computed
+  // on both sides of hydration would mismatch.
+  const freshness = {
+    label: latestJobAt ? formatRelativeDate(latestJobAt, locale) : null,
+    stale: isDataStale(latestJobAt),
+  };
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-[18rem_1fr]">
@@ -39,7 +49,7 @@ export default async function CompaniesPage({
           <EmptyState title={t("emptyTitle")} body={t("emptyBody")} />
         ) : (
           <>
-            <ResultsToolbar total={page.total} />
+            <ResultsToolbar total={page.total} freshness={freshness} />
             <CompaniesTable page={page} />
             {filters.perPage !== "all" ? (
               <Pagination

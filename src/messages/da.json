@@ -59,6 +59,9 @@
     },
     "toolbar": {
       "count": "{count} virksomheder",
+      "updated": "Opdateret: {time}",
+      "updatedNever": "Ingen data hentet endnu",
+      "updatedStaleHint": "Der er ikke kommet nye jobopslag ind i over 48 timer — tjek om scraperen kører",
       "pageSize": "Sidestørrelse",
       "perPageN": "{n} pr. side",
       "perPageAll": "Alle",
@@ -90,7 +93,7 @@
       "other": "Andet"
     },
     "enrich": {
-      "pending": "Henter data…",
+      "running": "Henter data…",
       "failed": "Kunne ikke hente",
       "noMatch": "Ingen CVR-match",
       "retry": "Prøv igen",
@@ -105,7 +108,9 @@
       "enrichFailureDetail": "Fejlårsager: {detail}",
       "fromWebsite": "Fra hjemmeside",
       "enrichAllDiscovered": "Fandt {discovered} hjemmesider",
-      "enrichAllWebsite": "Skrabede {scraped} hjemmesider for kontaktinfo"
+      "enrichAllWebsite": "Skrabede {scraped} hjemmesider for kontaktinfo",
+      "enrichAllTimeout": "Berigelsen tog for lang tid og blev afbrudt. Prøv igen — det færdige arbejde er gemt.",
+      "enrichAllPartial": "Nåede ikke igennem hele køen inden for tidsgrænsen — resten tages næste gang."
     },
     "krak": {
       "findPhones": "Find telefonnumre",
@@ -176,6 +181,14 @@
       "foundByAi": "Fundet automatisk af AI — klik på ikonet for at se kilden",
       "sourceLink": "Telefonnummer fundet automatisk — klik for at se kilden",
       "source": "AI"
+    },
+    "delete": {
+      "action": "Slet lead",
+      "confirmTitle": "Slet dette lead?",
+      "confirmBody": "{name} fjernes fra din liste og bliver ikke tildelt dig igen. Det kan ikke fortrydes.",
+      "confirm": "Slet",
+      "cancel": "Annullér",
+      "done": "Leadet er slettet"
     }
   },
   "NotFound": {

@@ -15,9 +15,27 @@ import {
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { PER_PAGE_OPTIONS } from "@/lib/leads/filters";
 
-// Top-of-results toolbar: total count, a page-size picker (25/50/100/All), and a
-// CSV export of every matching company (respects the current filters).
-export function ResultsToolbar({ total }: { total: number }) {
+/**
+ * Pipeline freshness, formatted on the server so the relative time can't drift
+ * between render and hydration.
+ */
+export type DataFreshness = {
+  /** Already-localised relative time, e.g. "3 hours ago". Null = never ingested. */
+  label: string | null;
+  /** Nothing has landed for over 48h — the pipeline is probably dead. */
+  stale: boolean;
+};
+
+// Top-of-results toolbar: total count, how fresh the data is, a page-size picker
+// (25/50/100/All), and a CSV export of every matching company (respects the
+// current filters).
+export function ResultsToolbar({
+  total,
+  freshness,
+}: {
+  total: number;
+  freshness: DataFreshness;
+}) {
   const t = useTranslations("Leads.toolbar");
   const router = useRouter();
   const pathname = usePathname();
@@ -40,9 +58,24 @@ export function ResultsToolbar({ total }: { total: number }) {
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <span className="text-muted-foreground text-sm tabular-nums">
-        {t("count", { count: total })}
-      </span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="text-muted-foreground text-sm tabular-nums">
+          {t("count", { count: total })}
+        </span>
+        {/* The two-second health check: if this is red, the pipeline is dead. */}
+        <span
+          className={`text-sm ${
+            freshness.stale
+              ? "text-destructive font-medium"
+              : "text-muted-foreground"
+          }`}
+          title={freshness.stale ? t("updatedStaleHint") : undefined}
+        >
+          {freshness.label
+            ? t("updated", { time: freshness.label })
+            : t("updatedNever")}
+        </span>
+      </div>
       <div className="flex items-center gap-2">
         <Select
           value={currentPerPage}

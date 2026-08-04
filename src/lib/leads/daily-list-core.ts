@@ -35,7 +35,28 @@ export type ExistingAssignment = {
   followUpAt: string | null;
   /** 'YYYY-MM-DD'. */
   listDate: string;
+  /**
+   * ISO timestamp, or null when live. A deleted row is gone from the user's
+   * board but MUST stay in `existing`: it is what keeps the company out of the
+   * fresh pool forever. See isDeleted below.
+   */
+  deletedAt: string | null;
 };
+
+/**
+ * A lead the user removed from their list.
+ *
+ * Deleted rows are treated asymmetrically on purpose:
+ *   * they DO count towards `assignedCompanyIds`, so the company is never
+ *     handed to this user again — the whole point of deleting it;
+ *   * they DON'T count as unworked, or the deletions would suppress the daily
+ *     top-up and the board would slowly starve;
+ *   * they are NEVER picked as recycled or fill, or a deleted lead would come
+ *     straight back out of the trash.
+ */
+function isDeleted(a: ExistingAssignment): boolean {
+  return a.deletedAt !== null;
+}
 
 /** The projection of a candidate `companies` row the planner needs. */
 export type CandidateCompany = {
@@ -118,7 +139,7 @@ export type DailyListPlan = {
  * counts against the daily target.
  */
 function isUnworked(a: ExistingAssignment): boolean {
-  return a.status === "new" && !a.inTrash;
+  return a.status === "new" && !a.inTrash && !isDeleted(a);
 }
 
 export function buildEligibilityContext(
@@ -126,8 +147,9 @@ export function buildEligibilityContext(
   exclusions: Exclusions,
 ): EligibilityContext {
   return {
-    // Covers active AND trashed assignments: a company the user has already
-    // been given must never come back around as "fresh".
+    // Covers active, trashed AND deleted assignments: a company the user has
+    // already been given must never come back around as "fresh". Deleting a
+    // lead relies on this — the row stays so the pair stays taken.
     assignedCompanyIds: new Set(existing.map((a) => a.companyId)),
     excludedNames: exclusions.nameNormalized.filter((n) => n.length > 0),
     excludedCvrs: new Set(exclusions.cvrs),
@@ -220,7 +242,10 @@ export function planDailyList(input: DailyListInput): DailyListPlan {
 
   // ---- 1. Recycled: follow-ups that have come due, oldest first. ----------
   const recycled = existing
-    .filter((a) => a.inTrash && a.followUpAt !== null && a.followUpAt <= today)
+    .filter(
+      (a) =>
+        a.inTrash && !isDeleted(a) && a.followUpAt !== null && a.followUpAt <= today,
+    )
     .sort((a, b) => byFollowUpAsc(a.followUpAt, b.followUpAt) || byIdAsc(a, b))
     .slice(0, Math.min(trashBudget, deficit));
 
@@ -255,7 +280,7 @@ export function planDailyList(input: DailyListInput): DailyListPlan {
   const fill =
     fillBudget > 0
       ? existing
-          .filter((a) => a.inTrash && !recycledIds.has(a.id))
+          .filter((a) => a.inTrash && !isDeleted(a) && !recycledIds.has(a.id))
           .sort(
             (a, b) =>
               byFollowUpAsc(a.followUpAt, b.followUpAt) ||

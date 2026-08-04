@@ -190,6 +190,44 @@ export async function setLeadNote(input: {
   return { ok: true };
 }
 
+/**
+ * Removes a lead from the user's list for good.
+ *
+ * A soft delete: the row stays, `deleted_at` is stamped. That is load-bearing,
+ * not laziness — `unique (user_id, company_id)` is what stops the daily-list
+ * engine from handing the same company to the same user twice, so a hard DELETE
+ * would free the pair and the company would reappear on tomorrow's list. The
+ * engine keeps counting deleted rows as "already assigned" while excluding them
+ * from the board and from both trash tiers.
+ */
+export async function deleteLead(input: {
+  id: string;
+}): Promise<ActionResult> {
+  const parsed = idSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "INVALID_INPUT" };
+
+  const { supabase, user } = await requireUser();
+  if (!user) return { ok: false, error: "UNAUTHENTICATED" };
+
+  const { data, error } = await supabase
+    .from("lead_assignments")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", parsed.data.id)
+    .eq("user_id", user.id)
+    // Idempotent: deleting twice is not an error, but don't move the timestamp.
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) return { ok: false, error: "UPDATE_FAILED" };
+  // Already deleted, or someone else's id — either way there's nothing to do
+  // and nothing to report as broken.
+  if (!data) return { ok: true };
+
+  revalidateBoard();
+  return { ok: true };
+}
+
 // ============================================================
 // Exclusions
 // ============================================================

@@ -59,6 +59,9 @@
     },
     "toolbar": {
       "count": "{count} companies",
+      "updated": "Updated: {time}",
+      "updatedNever": "No data ingested yet",
+      "updatedStaleHint": "No new job postings have arrived in over 48 hours — check whether the scraper is running",
       "pageSize": "Page size",
       "perPageN": "{n} per page",
       "perPageAll": "All",
@@ -90,7 +93,7 @@
       "other": "Other"
     },
     "enrich": {
-      "pending": "Fetching data…",
+      "running": "Fetching data…",
       "failed": "Lookup failed",
       "noMatch": "No CVR match",
       "retry": "Retry",
@@ -105,7 +108,9 @@
       "enrichFailureDetail": "Failure reasons: {detail}",
       "fromWebsite": "From website",
       "enrichAllDiscovered": "Found {discovered} websites",
-      "enrichAllWebsite": "Scraped {scraped} websites for contact info"
+      "enrichAllWebsite": "Scraped {scraped} websites for contact info",
+      "enrichAllTimeout": "Enrichment took too long and was aborted. Try again — finished work is saved.",
+      "enrichAllPartial": "Didn't get through the whole queue in time — the rest is picked up next run."
     },
     "krak": {
       "findPhones": "Find phone numbers",
@@ -176,6 +181,14 @@
       "foundByAi": "Found automatically by AI — click the icon to see the source",
       "sourceLink": "Phone number found automatically — click to see the source",
       "source": "AI"
+    },
+    "delete": {
+      "action": "Delete lead",
+      "confirmTitle": "Delete this lead?",
+      "confirmBody": "{name} will be removed from your list and never assigned to you again. This can't be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel",
+      "done": "Lead deleted"
     }
   },
   "NotFound": {
