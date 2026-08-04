@@ -59,6 +59,9 @@
     },
     "toolbar": {
       "count": "{count} companies",
+      "updated": "Updated: {time}",
+      "updatedNever": "No data ingested yet",
+      "updatedStaleHint": "No new job postings have arrived in over 48 hours — check whether the scraper is running",
       "pageSize": "Page size",
       "perPageN": "{n} per page",
       "perPageAll": "All",
@@ -90,7 +93,7 @@
       "other": "Other"
     },
     "enrich": {
-      "pending": "Fetching data…",
+      "running": "Fetching data…",
       "failed": "Lookup failed",
       "noMatch": "No CVR match",
       "retry": "Retry",

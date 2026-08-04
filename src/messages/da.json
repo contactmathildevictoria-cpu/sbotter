@@ -59,6 +59,9 @@
     },
     "toolbar": {
       "count": "{count} virksomheder",
+      "updated": "Opdateret: {time}",
+      "updatedNever": "Ingen data hentet endnu",
+      "updatedStaleHint": "Der er ikke kommet nye jobopslag ind i over 48 timer — tjek om scraperen kører",
       "pageSize": "Sidestørrelse",
       "perPageN": "{n} pr. side",
       "perPageAll": "Alle",
@@ -90,7 +93,7 @@
       "other": "Andet"
     },
     "enrich": {
-      "pending": "Henter data…",
+      "running": "Henter data…",
       "failed": "Kunne ikke hente",
       "noMatch": "Ingen CVR-match",
       "retry": "Prøv igen",
