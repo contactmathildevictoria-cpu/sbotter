@@ -118,9 +118,28 @@ describe("AI enrichment is behind a kill switch", () => {
 
 describe("the batch stays inside its budget", () => {
   it("guards all three fast passes, not just one", () => {
-    const guards = cvr.match(/shouldRunAnother\(startedAt, budgetMs, Date\.now\(\)/g) ?? [];
+    // Pass 1 measures against its own share (cvrBudgetMs) so a rate-limited CVR
+    // queue can't eat the whole run; the rest measure against the full budget.
+    // Either counts as guarded.
+    const guards =
+      cvr.match(
+        /shouldRunAnother\(\s*startedAt,\s*(?:cvrBudgetMs|budgetMs),\s*Date\.now\(\)/g,
+      ) ?? [];
     // Three fast passes plus the AI pass's own guard.
     expect(guards.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("caps pass 1 below the full budget so passes 2 and 3 still run", () => {
+    expect(cvr).toMatch(/const CVR_PASS_BUDGET_SHARE = 0\.7;/);
+    expect(cvr).toMatch(
+      /const cvrBudgetMs = Math\.round\(budgetMs \* CVR_PASS_BUDGET_SHARE\);/,
+    );
+  });
+
+  it("enriches the busiest companies first", () => {
+    // At ~20 lookups/minute the queue takes hours, so ordering decides which
+    // leads are usable today.
+    expect(cvr).toMatch(/\.order\("open_jobs_count", \{ ascending: false \}\)/);
   });
 
   it("budgets the website pass for its real worst case", () => {

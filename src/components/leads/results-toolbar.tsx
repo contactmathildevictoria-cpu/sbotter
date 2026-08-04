@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import { PER_PAGE_OPTIONS } from "@/lib/leads/filters";
+import type { EnrichmentProgress } from "@/lib/leads/queries";
 
 /**
  * Pipeline freshness, formatted on the server so the relative time can't drift
@@ -26,15 +27,22 @@ export type DataFreshness = {
   stale: boolean;
 };
 
-// Top-of-results toolbar: total count, how fresh the data is, a page-size picker
-// (25/50/100/All), and a CSV export of every matching company (respects the
-// current filters).
+// Top-of-results toolbar: total count, enrichment progress, how fresh the data
+// is, a page-size picker (25/50/100/All), and a CSV export of every matching
+// company (respects the current filters).
 export function ResultsToolbar({
   total,
   freshness,
+  enrichment,
 }: {
   total: number;
   freshness: DataFreshness;
+  /**
+   * Global CVR enrichment progress. Deliberately NOT filtered like `total` —
+   * it answers "is the queue getting shorter", which is a property of the whole
+   * database, not of the current view.
+   */
+  enrichment: EnrichmentProgress;
 }) {
   const t = useTranslations("Leads.toolbar");
   const router = useRouter();
@@ -62,6 +70,27 @@ export function ResultsToolbar({
         <span className="text-muted-foreground text-sm tabular-nums">
           {t("count", { count: total })}
         </span>
+        {/* "X of Y enriched", plus how many are still queued. The queue drains
+            over hours at the provider's rate limit, so this is the thing to
+            watch to know it's still moving. */}
+        {enrichment.total > 0 ? (
+          <span
+            className="text-muted-foreground text-sm tabular-nums"
+            title={
+              enrichment.remaining > 0
+                ? t("enrichedQueued", { remaining: enrichment.remaining })
+                : undefined
+            }
+          >
+            {t("enriched", {
+              enriched: enrichment.enriched,
+              total: enrichment.total,
+            })}
+            {enrichment.remaining > 0
+              ? ` · ${t("enrichedQueued", { remaining: enrichment.remaining })}`
+              : null}
+          </span>
+        ) : null}
         {/* The two-second health check: if this is red, the pipeline is dead. */}
         <span
           className={`text-sm ${
