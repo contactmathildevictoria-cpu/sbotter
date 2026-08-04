@@ -104,7 +104,7 @@
       "enrichAllRunning": "Beriger…",
       "enrichAllDone": "Beriget {enriched}, {failed} fejlede, {remaining} venter stadig",
       "enrichAllError": "Kunne ikke berige. Prøv igen.",
-      "enrichQuota": "CVR-kvoten er opbrugt (50/dag). Sæt CVRAPI_TOKEN for at fjerne grænsen.",
+      "enrichQuota": "CVR-opslag er blokeret — månedskvoten er opbrugt, eller API-nøglen blev afvist. Resten tages næste gang.",
       "enrichFailureDetail": "Fejlårsager: {detail}",
       "fromWebsite": "Fra hjemmeside",
       "enrichAllDiscovered": "Fandt {discovered} hjemmesider",

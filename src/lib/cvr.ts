@@ -4,147 +4,100 @@ import { env } from "@/lib/env";
 import { scrapeWebsiteContacts } from "@/lib/website-scraper";
 import { applyAiPhoneResult, findPhoneViaAI } from "@/lib/ai-phone";
 import { shouldRunAnother } from "@/lib/budget";
+import {
+  BATCH_CHUNK_SIZE,
+  buildCvrUpdate,
+  findCvrByName,
+  isBlockingOutcome,
+  lookupBatch,
+  lookupByCvr,
+  type CurrentCvrColumns,
+  type CvrLookupOutcome,
+  type CvrLookupResult,
+} from "@/lib/cvrlookup";
 import type { CvrEnrichmentStatus } from "@/types/database";
 
-// Free Danish CVR registry API. No account needed — just a valid User-Agent in
-// the format "[company] - [project] - [contact]". 50 lookups/day/IP unless a
-// CVRAPI_TOKEN is set (then we authenticate via HTTP Basic).
-// Docs: https://cvrapi.dk/documentation
-const CVR_API_URL = "https://cvrapi.dk/api";
-const USER_AGENT = "Spotter - Lead enrichment - mvlm@evolugic.com";
+// ---------------------------------------------------------------------------
+// CVR enrichment — provider: cvrlookup.dk (see src/lib/cvrlookup.ts)
+// ---------------------------------------------------------------------------
+//
+// Replaced cvrapi.dk, which allowed 50 lookups/day/IP. The daily-quota handling
+// that existed for it is gone: this provider bills monthly (25.000) plus a
+// per-minute limit, and the client paces itself against the latter. What remains
+// here is the part that touches our database.
 
-interface CvrApiResponse {
-  vat: number;
-  name: string;
-  protected: boolean;
-  phone: string | null;
-  email: string | null;
-  industrycode: number | null;
-  industrydesc: string | null;
-  companycode: number;
-  companydesc: string;
-  creditbankrupt: boolean;
-  owners: Array<{ name: string }> | null;
-  error?: string;
+/**
+ * Re-look-up a company only when its data is older than this.
+ *
+ * `cvr_last_fetched_at` is stamped on every attempt, successful or not, so a
+ * company that fails cannot be retried in a tight loop either. CVR master data
+ * changes slowly, and the monthly quota is the scarce resource, so a month is
+ * the right order of magnitude.
+ */
+export const CVR_REFRESH_AFTER_DAYS = 30;
+
+/** Columns CVR enrichment may fill, plus the two it may only flip on. */
+const CVR_TARGET_COLUMNS =
+  "id, phone, email, contact_person_name, cvr_industry_code, cvr_industry_text, " +
+  "cvr_company_type, is_ad_protected, is_bankrupt, cvr_phone, cvr_email, " +
+  "cvr_advertising_protection, cvr_employee_count, cvr_employee_interval, " +
+  "cvr_directors, cvr_signature_rule";
+
+/** Write a successful lookup, coalescing into whatever is already there. */
+async function applyCvrResult(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  companyId: string,
+  result: CvrLookupResult,
+  extra: Record<string, unknown> = {},
+): Promise<void> {
+  const { data: current } = await supabase
+    .from("companies")
+    .select(CVR_TARGET_COLUMNS)
+    .eq("id", companyId)
+    .single();
+
+  const now = new Date().toISOString();
+  await supabase
+    .from("companies")
+    .update({
+      ...buildCvrUpdate((current ?? {}) as CurrentCvrColumns, result),
+      ...extra,
+      cvr_enrichment_status: "enriched",
+      cvr_enriched_at: now,
+      cvr_last_fetched_at: now,
+    })
+    .eq("id", companyId);
 }
 
-export interface CvrEnrichmentResult {
-  phone: string | null;
-  email: string | null;
-  contactPersonName: string | null;
-  industryCode: number | null;
-  industryText: string | null;
-  companyType: string;
-  isAdProtected: boolean;
-  isBankrupt: boolean;
-  cvrNumber: number;
+/**
+ * Record an attempt that produced no data.
+ *
+ * `cvr_last_fetched_at` is stamped even here — that is the whole point of the
+ * column: a company that isn't in CVR shouldn't be looked up again tomorrow.
+ * A blocking outcome (quota gone, key rejected) is the exception: nothing was
+ * learned about the company, so its timestamp is left alone and only the status
+ * moves, keeping it first in line when the block clears.
+ */
+async function recordCvrMiss(
+  supabase: ReturnType<typeof createSupabaseServiceClient>,
+  companyId: string,
+  status: CvrEnrichmentStatus,
+  outcome: CvrLookupOutcome,
+): Promise<void> {
+  await supabase
+    .from("companies")
+    .update({
+      cvr_enrichment_status: status,
+      ...(isBlockingOutcome(outcome)
+        ? {}
+        : { cvr_last_fetched_at: new Date().toISOString() }),
+    })
+    .eq("id", companyId);
 }
 
-type FetchOutcome =
-  | "ok"
-  | "not_found"
-  | "quota"
-  | "invalid_request"
-  | "network_error";
-
-function toResult(json: CvrApiResponse): CvrEnrichmentResult {
-  return {
-    phone: json.phone ?? null,
-    email: json.email ?? null,
-    contactPersonName: json.owners?.[0]?.name ?? null,
-    industryCode: json.industrycode ?? null,
-    industryText: json.industrydesc ?? null,
-    companyType: json.companydesc,
-    isAdProtected: Boolean(json.protected),
-    isBankrupt: Boolean(json.creditbankrupt),
-    cvrNumber: json.vat,
-  };
-}
-
-// Single network call. Returns a structured outcome so callers can distinguish
-// "no such company" (definitive) from transient failures (quota/network) that
-// are worth retrying. Never throws.
-async function cvrFetch(params: { vat?: string; name?: string }): Promise<{
-  result: CvrEnrichmentResult | null;
-  matchedName: string | null;
-  outcome: FetchOutcome;
-}> {
-  const search = new URLSearchParams({ country: "dk" });
-  if (params.vat) search.set("vat", params.vat);
-  else if (params.name) search.set("name", params.name);
-
-  const headers: Record<string, string> = {
-    "User-Agent": USER_AGENT,
-    Accept: "application/json",
-  };
-  if (env.cvrApiToken) {
-    headers.Authorization = `Basic ${Buffer.from(`${env.cvrApiToken}:`).toString("base64")}`;
-  }
-
-  let json: CvrApiResponse;
-  try {
-    const res = await fetch(`${CVR_API_URL}?${search.toString()}`, {
-      headers,
-      cache: "no-store",
-    });
-    json = (await res.json()) as CvrApiResponse;
-  } catch (err) {
-    console.error("[cvr] network error:", err);
-    return { result: null, matchedName: null, outcome: "network_error" };
-  }
-
-  if (json.error) {
-    switch (json.error) {
-      case "NOT_FOUND":
-        return { result: null, matchedName: null, outcome: "not_found" };
-      case "QUOTA_EXCEEDED":
-        console.warn(
-          "[cvr] QUOTA_EXCEEDED — daily lookup limit reached. Set CVRAPI_TOKEN to remove it.",
-        );
-        return { result: null, matchedName: null, outcome: "quota" };
-      default:
-        // INVALID_UA, INVALID_VAT, or anything else.
-        console.error(`[cvr] API error: ${json.error}`);
-        return { result: null, matchedName: null, outcome: "invalid_request" };
-    }
-  }
-
-  return { result: toResult(json), matchedName: json.name ?? null, outcome: "ok" };
-}
-
-function normalizeName(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/\b(aps|a\/s|i\/s|p\/s|ivs|k\/s|holding)\b/g, "")
-    .replace(/[^a-z0-9æøå ]/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-// Name search is fuzzy, so only trust a result whose returned name reasonably
-// matches what we asked for (after stripping company-form suffixes).
-function namesMatch(input: string, matched: string | null): boolean {
-  if (!matched) return false;
-  const a = normalizeName(input);
-  const b = normalizeName(matched);
-  if (!a || !b) return false;
-  return a === b || a.includes(b) || b.includes(a);
-}
-
-/** Look up a company by exact CVR number. Never throws; null on any failure. */
-export async function lookupByCvr(
-  cvrNumber: string,
-): Promise<CvrEnrichmentResult | null> {
-  return (await cvrFetch({ vat: cvrNumber })).result;
-}
-
-/** Look up by company name (fuzzy). Returns null if the match looks unreliable. */
-export async function lookupByName(
-  companyName: string,
-): Promise<CvrEnrichmentResult | null> {
-  const { result, matchedName } = await cvrFetch({ name: companyName });
-  if (!result || !namesMatch(companyName, matchedName)) return null;
-  return result;
+/** Definitive miss vs. worth retrying. */
+function statusForOutcome(outcome: CvrLookupOutcome): CvrEnrichmentStatus {
+  return outcome === "not_found" ? "no_match" : "failed";
 }
 
 // ---------------------------------------------------------------------------
@@ -353,18 +306,24 @@ async function discoverWebsiteIfMissing(
 
 export type EnrichResult = {
   status: CvrEnrichmentStatus;
+  /**
+   * The run should stop: the monthly quota is spent, or the API key is rejected
+   * or not entitled. Nothing more can be enriched until that changes.
+   * (Named for the old daily-quota flag so callers didn't have to change.)
+   */
   quotaExceeded: boolean;
-  // Why a row ended up 'failed' (quota | network_error | invalid_request |
-  // db_error), so batch callers can report the actual cause. null otherwise.
+  // Why a row ended up 'failed' (quota | rate_limit | network_error |
+  // invalid_request | db_error), so batch callers can report the actual cause.
   reason: string | null;
 };
 
 /**
  * Enrich a single company row from CVR. Prefers exact CVR lookup, falls back to
- * name search. Writes results + status to the companies table. Never throws —
- * on transient failure it marks the row 'failed' (retryable); on a genuine miss
- * it marks 'no_match'. Returns the final status and whether the API quota was
- * hit (so batch callers can stop early).
+ * resolving the name to a CVR number first. Never throws — on transient failure
+ * it marks the row 'failed' (retryable); on a genuine miss it marks 'no_match'.
+ *
+ * Values are coalesced: only columns that are currently null get written. See
+ * buildCvrUpdate.
  */
 export async function enrichCompanyFromCvr(
   companyId: string,
@@ -375,44 +334,35 @@ export async function enrichCompanyFromCvr(
   const supabase = createSupabaseServiceClient();
 
   try {
-    let result: CvrEnrichmentResult | null = null;
-    let outcome: FetchOutcome = "not_found";
+    // Rows ingested without a CVR number need one resolved from the name first.
+    // That costs an extra quota unit, hence only when we have no number.
+    let cvr = cvrNumber?.replace(/\D/g, "") || null;
     let foundViaName = false;
-
-    if (cvrNumber) {
-      const r = await cvrFetch({ vat: cvrNumber });
-      result = r.result;
-      outcome = r.outcome;
-    } else {
-      const r = await cvrFetch({ name: companyName });
-      if (r.result && namesMatch(companyName, r.matchedName)) {
-        result = r.result;
-        outcome = "ok";
-        foundViaName = true;
-      } else {
-        // A returned-but-mismatched name counts as a definitive miss.
-        outcome = r.outcome === "ok" ? "not_found" : r.outcome;
+    if (!cvr) {
+      const search = await findCvrByName(companyName);
+      if (!search.cvr) {
+        const status = statusForOutcome(search.outcome);
+        await recordCvrMiss(supabase, companyId, status, search.outcome);
+        return {
+          status,
+          quotaExceeded: isBlockingOutcome(search.outcome),
+          reason: status === "failed" ? search.outcome : null,
+        };
       }
+      cvr = search.cvr;
+      foundViaName = true;
     }
 
+    const { result, outcome } = await lookupByCvr(cvr);
+
     if (result) {
-      await supabase
-        .from("companies")
-        .update({
-          phone: result.phone,
-          email: result.email,
-          contact_person_name: result.contactPersonName,
-          cvr_industry_code: result.industryCode,
-          cvr_industry_text: result.industryText,
-          cvr_company_type: result.companyType,
-          is_ad_protected: result.isAdProtected,
-          is_bankrupt: result.isBankrupt,
-          cvr_enrichment_status: "enriched",
-          cvr_enriched_at: new Date().toISOString(),
-          // Backfill the CVR number we discovered via name search.
-          ...(foundViaName ? { cvr: String(result.cvrNumber) } : {}),
-        })
-        .eq("id", companyId);
+      await applyCvrResult(
+        supabase,
+        companyId,
+        result,
+        // Backfill the CVR number we resolved from the name.
+        foundViaName ? { cvr: result.cvrNumber } : {},
+      );
 
       // Discover a website (email domain, then job postings) if we don't have
       // one — the scraper depends on it. Skipped in batch (Pass 2 handles it).
@@ -423,22 +373,16 @@ export async function enrichCompanyFromCvr(
       return { status: "enriched", quotaExceeded: false, reason: null };
     }
 
-    // not_found / name-mismatch → no_match (definitive). Everything else
-    // (quota, network, invalid) → failed (retryable).
-    const status: CvrEnrichmentStatus =
-      outcome === "not_found" ? "no_match" : "failed";
+    const status = statusForOutcome(outcome);
     if (status === "failed") {
       console.warn(
         `[cvr] ${companyName} (${companyId}) failed — reason: ${outcome}`,
       );
     }
-    await supabase
-      .from("companies")
-      .update({ cvr_enrichment_status: status })
-      .eq("id", companyId);
+    await recordCvrMiss(supabase, companyId, status, outcome);
     return {
       status,
-      quotaExceeded: outcome === "quota",
+      quotaExceeded: isBlockingOutcome(outcome),
       reason: status === "failed" ? outcome : null,
     };
   } catch (err) {
@@ -544,6 +488,21 @@ const DEFAULT_FAST_BUDGET_MS = 200_000;
 const CVR_EXPECTED_MS = 3_000;
 const DISCOVERY_EXPECTED_MS = 6_000;
 const WEBSITE_EXPECTED_MS = 52_000;
+
+/**
+ * Companies whose CVR data Pass 1 will try to refresh per run.
+ *
+ * The old provider's 50/day cap is gone; the ceiling now is what fits in the
+ * function's wall-clock budget. 200 is BATCH_CHUNK_SIZE × 10 chunks, which the
+ * budget check below stops short of if the provider is slow.
+ */
+const CVR_PASS_LIMIT = 200;
+
+/**
+ * One batch call plus the per-company writes that follow it. Generous, because
+ * the client may sit out a minute waiting for the rate-limit window to reset.
+ */
+const CVR_CHUNK_EXPECTED_MS = 15_000;
 
 // Pass 4 is capped low and paced slowly: every call runs web search, which is
 // slow and billed per search on top of tokens. It runs on its own cron
@@ -745,6 +704,9 @@ export type BatchEnrichSummary = {
   failed: number;
   skipped: number;
   remaining: number;
+  // The CVR pass stopped because the provider blocked it — monthly quota spent,
+  // or the API key rejected / not entitled to the batch endpoint. (Kept under
+  // the old name so the enrich UI and cron response shape are unchanged.)
   stoppedOnQuota: boolean;
   // Tally of why failures happened, e.g. { quota: 1 } or { invalid_request: 2 }.
   // Lets the UI explain "0 enriched, N failed" without server-log access.
@@ -780,23 +742,31 @@ export type BatchEnrichSummary = {
  * is checked between companies and reported as `stoppedOnTime`, so a run always
  * fits inside the function's limit and says when it didn't finish.
  *
- * Batch size: 40 without a token, 200 with CVRAPI_TOKEN (no quota).
+ * Batch size: CVR_PASS_LIMIT companies per run, looked up BATCH_CHUNK_SIZE at a
+ * time through the provider's batch endpoint.
  */
 export async function enrichPendingCompanies(
   opts: { budgetMs?: number } = {},
 ): Promise<BatchEnrichSummary> {
   const supabase = createSupabaseServiceClient();
-  const limit = env.cvrApiToken ? 200 : 40;
   const budgetMs = opts.budgetMs ?? DEFAULT_FAST_BUDGET_MS;
   const startedAt = Date.now();
   let stoppedOnTime = false;
+
+  // Skip anything looked up recently, however it turned out — that is what
+  // cvr_last_fetched_at is for. Without it a company CVR has no data for would
+  // be re-requested on every single run and quietly eat the monthly quota.
+  const staleBefore = new Date(
+    Date.now() - CVR_REFRESH_AFTER_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
 
   const { data: companies, error } = await supabase
     .from("companies")
     .select("id, cvr, name")
     .in("cvr_enrichment_status", ["pending", "failed"])
-    .order("created_at", { ascending: true })
-    .limit(limit);
+    .or(`cvr_last_fetched_at.is.null,cvr_last_fetched_at.lt.${staleBefore}`)
+    .order("cvr_last_fetched_at", { ascending: true, nullsFirst: true })
+    .limit(CVR_PASS_LIMIT);
 
   if (error) {
     throw new Error(`Failed to load companies to enrich: ${error.message}`);
@@ -807,45 +777,129 @@ export async function enrichPendingCompanies(
   let skipped = 0;
   let stoppedOnQuota = false;
   const failureReasons: Record<string, number> = {};
-  const total = companies?.length ?? 0;
+  const pending = companies ?? [];
+  const total = pending.length;
 
-  for (let i = 0; i < total; i++) {
-    if (!shouldRunAnother(startedAt, budgetMs, Date.now(), CVR_EXPECTED_MS)) {
+  const countFailure = (reason: string, count = 1) => {
+    failed += count;
+    failureReasons[reason] = (failureReasons[reason] ?? 0) + count;
+  };
+
+  // Companies that already carry a CVR number go through the batch endpoint.
+  // The rest need a name search first, which is a per-company call, so they run
+  // one at a time afterwards.
+  const withCvr = pending.filter((c) => c.cvr?.replace(/\D/g, "").length === 8);
+  const withoutCvr = pending.filter(
+    (c) => c.cvr?.replace(/\D/g, "").length !== 8,
+  );
+  const byCvr = new Map<string, (typeof pending)[number]>();
+  for (const c of withCvr) byCvr.set(c.cvr!.replace(/\D/g, ""), c);
+
+  const chunks: string[][] = [];
+  for (let i = 0; i < withCvr.length; i += BATCH_CHUNK_SIZE) {
+    chunks.push(
+      withCvr.slice(i, i + BATCH_CHUNK_SIZE).map((c) => c.cvr!.replace(/\D/g, "")),
+    );
+  }
+
+  for (const [index, chunk] of chunks.entries()) {
+    if (!shouldRunAnother(startedAt, budgetMs, Date.now(), CVR_CHUNK_EXPECTED_MS)) {
       stoppedOnTime = true;
-      console.warn(`[cvr] pass 1 stopping early at ${i}/${total} — out of budget`);
+      console.warn(
+        `[cvr] pass 1 stopping early at chunk ${index}/${chunks.length} — out of budget`,
+      );
       break;
     }
-    const c = companies![i];
-    const { status, quotaExceeded, reason } = await enrichCompanyFromCvr(
-      c.id,
-      c.cvr,
-      c.name,
-      { discoverWebsite: false },
-    );
-    if (status === "enriched") enriched++;
-    else if (status === "no_match") skipped++;
-    else {
-      failed++;
-      const key = reason ?? "unknown";
-      failureReasons[key] = (failureReasons[key] ?? 0) + 1;
+
+    const batch = await lookupBatch(chunk);
+
+    // The whole call failed, so nothing in this chunk was looked up. The rows
+    // keep their status and timestamp and stay at the front of the queue; only
+    // the tally records what went wrong.
+    if (batch.outcome !== "ok") {
+      countFailure(batch.outcome, chunk.length);
+      if (isBlockingOutcome(batch.outcome)) {
+        console.warn(`[cvr] pass 1 stopping: ${batch.outcome}`);
+        stoppedOnQuota = true;
+        break;
+      }
+      continue;
     }
 
+    for (const [cvr, result] of batch.found) {
+      const company = byCvr.get(cvr);
+      if (!company) continue;
+      await applyCvrResult(supabase, company.id, result);
+      enriched++;
+    }
+
+    for (const cvr of batch.notFound) {
+      const company = byCvr.get(cvr);
+      if (!company) continue;
+      await recordCvrMiss(supabase, company.id, "no_match", "not_found");
+      skipped++;
+    }
+
+    // Rows the provider never processed keep their status and timestamp, so the
+    // next run picks them up first. Not a failure.
+    const perRowErrors =
+      chunk.length - batch.found.size - batch.notFound.length -
+      batch.unprocessed.length;
+    if (perRowErrors > 0) countFailure("provider_error", perRowErrors);
+
     console.log(
-      `[cvr] batch ${i + 1}/${total} — ${c.name} (${c.id}) → ${status}`,
+      `[cvr] chunk ${index + 1}/${chunks.length} — ${batch.found.size} enriched, ` +
+        `${batch.notFound.length} no_match, ${batch.unprocessed.length} left over`,
     );
 
-    if (quotaExceeded) {
-      console.warn("[cvr] batch stopping early: daily quota exceeded");
+    // The monthly quota ran out mid-chunk; results above are still valid.
+    if (batch.quotaExhausted) {
+      console.warn("[cvr] pass 1 stopping: monthly quota exhausted");
       stoppedOnQuota = true;
       break;
     }
-    if (i < total - 1) await sleep(1000);
   }
 
+  // Name-search companies, one at a time (search + lookup per company).
+  if (!stoppedOnQuota) {
+    for (const [index, company] of withoutCvr.entries()) {
+      if (!shouldRunAnother(startedAt, budgetMs, Date.now(), CVR_EXPECTED_MS)) {
+        stoppedOnTime = true;
+        console.warn(
+          `[cvr] pass 1 name search stopping at ${index}/${withoutCvr.length} — out of budget`,
+        );
+        break;
+      }
+      const { status, quotaExceeded, reason } = await enrichCompanyFromCvr(
+        company.id,
+        null,
+        company.name,
+        { discoverWebsite: false },
+      );
+      if (status === "enriched") enriched++;
+      else if (status === "no_match") skipped++;
+      else countFailure(reason ?? "unknown");
+
+      console.log(
+        `[cvr] name search ${index + 1}/${withoutCvr.length} — ` +
+          `${company.name} (${company.id}) → ${status}`,
+      );
+
+      if (quotaExceeded) {
+        console.warn("[cvr] pass 1 stopping: quota or key blocked");
+        stoppedOnQuota = true;
+        break;
+      }
+    }
+  }
+
+  // Same predicate the selection used, so "remaining" means "would be picked up
+  // by the next run" rather than counting rows the refresh window excludes.
   const { count: remaining } = await supabase
     .from("companies")
     .select("id", { count: "exact", head: true })
-    .in("cvr_enrichment_status", ["pending", "failed"]);
+    .in("cvr_enrichment_status", ["pending", "failed"])
+    .or(`cvr_last_fetched_at.is.null,cvr_last_fetched_at.lt.${staleBefore}`);
 
   // The website passes below run regardless of CVR's outcome (quota included),
   // so a blocked CVR never stalls website discovery or scraping.

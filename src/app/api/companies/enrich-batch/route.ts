@@ -5,7 +5,8 @@ import { env } from "@/lib/env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// CVR is rate-limited to 1 call/sec; a 200-row batch can take a few minutes.
+// CVR lookups are paced against the provider's per-minute limit, and the
+// website passes are slow, so a full run can take a few minutes.
 export const maxDuration = 300;
 
 /**
@@ -19,7 +20,7 @@ const BUDGET_MS = 200_000;
 
 // POST /api/companies/enrich-batch
 // Runs the three FAST passes (CVR, website discovery, website scrape) on
-// pending/failed companies — 40, or 200 with CVRAPI_TOKEN.
+// pending/failed companies, up to 200 CVR lookups per run.
 //
 // The AI phone lookup is deliberately NOT run here: one lookup can take ~40s,
 // and a batch of them used to push this past maxDuration, so the request never

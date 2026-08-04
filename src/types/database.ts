@@ -52,6 +52,16 @@ export type WebsiteScrapeStatus =
   | "no_website"
   | "skipped";
 
+/**
+ * One person on a company's direktion, as stored in `companies.cvr_directors`.
+ *
+ * Name and title only, by design. The CVR provider also returns each person's
+ * private home address; it is stripped in src/lib/cvrlookup.ts before anything
+ * is written, and this type exists partly to keep that contract visible at the
+ * database boundary. Do not widen it.
+ */
+export type CvrDirector = { name: string; title: string | null };
+
 export type Database = {
   public: {
     Tables: {
@@ -143,6 +153,16 @@ export type Database = {
           is_bankrupt: boolean;
           cvr_enriched_at: string | null;
           cvr_enrichment_status: CvrEnrichmentStatus;
+          // cvrlookup.dk fields. `cvr_advertising_protection` is nullable where
+          // the older `is_ad_protected` is not: null means "not looked up yet".
+          cvr_phone: string | null;
+          cvr_email: string | null;
+          cvr_advertising_protection: boolean | null;
+          cvr_employee_count: number | null;
+          cvr_employee_interval: string | null;
+          cvr_directors: CvrDirector[] | null;
+          cvr_signature_rule: string | null;
+          cvr_last_fetched_at: string | null;
           krak_phone: string | null;
           krak_contact_person: string | null;
           krak_contact_title: string | null;
@@ -190,6 +210,14 @@ export type Database = {
           is_bankrupt?: boolean;
           cvr_enriched_at?: string | null;
           cvr_enrichment_status?: CvrEnrichmentStatus;
+          cvr_phone?: string | null;
+          cvr_email?: string | null;
+          cvr_advertising_protection?: boolean | null;
+          cvr_employee_count?: number | null;
+          cvr_employee_interval?: string | null;
+          cvr_directors?: CvrDirector[] | null;
+          cvr_signature_rule?: string | null;
+          cvr_last_fetched_at?: string | null;
           krak_phone?: string | null;
           krak_contact_person?: string | null;
           krak_contact_title?: string | null;
@@ -237,6 +265,14 @@ export type Database = {
           is_bankrupt?: boolean;
           cvr_enriched_at?: string | null;
           cvr_enrichment_status?: CvrEnrichmentStatus;
+          cvr_phone?: string | null;
+          cvr_email?: string | null;
+          cvr_advertising_protection?: boolean | null;
+          cvr_employee_count?: number | null;
+          cvr_employee_interval?: string | null;
+          cvr_directors?: CvrDirector[] | null;
+          cvr_signature_rule?: string | null;
+          cvr_last_fetched_at?: string | null;
           krak_phone?: string | null;
           krak_contact_person?: string | null;
           krak_contact_title?: string | null;

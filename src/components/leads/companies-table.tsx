@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { ArrowUpRight, Mail, Phone, ShieldCheck, User } from "lucide-react";
+import { ArrowUpRight, Mail, Phone, ShieldAlert, User } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -103,12 +103,20 @@ export async function CompaniesTable({ page }: { page: CompaniesPage }) {
                 <TableCell>
                   <div className="flex items-center gap-1.5 font-medium">
                     {row.name}
-                    {row.is_ad_protected ? (
+                    {/* Reklamebeskyttelse gates who we're allowed to cold-call,
+                        so it's red rather than muted — it has to be readable at
+                        a glance while scanning the list. `cvr_advertising_
+                        protection` is the current source; `is_ad_protected` is
+                        the older not-null column, still true on rows enriched
+                        before the provider switch. Not filtered out yet: we
+                        want to see how many there are first. */}
+                    {row.cvr_advertising_protection || row.is_ad_protected ? (
                       <span
                         title={tEnrich("adProtected")}
                         className="inline-flex"
+                        aria-label={tEnrich("adProtected")}
                       >
-                        <ShieldCheck className="text-muted-foreground size-3.5 shrink-0" />
+                        <ShieldAlert className="size-3.5 shrink-0 text-red-600 dark:text-red-500" />
                       </span>
                     ) : null}
                     {row.is_bankrupt ? (
