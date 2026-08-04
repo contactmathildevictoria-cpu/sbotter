@@ -52,7 +52,7 @@ kunne teste der):
 | Variabel | Værdi | Noter |
 |---|---|---|
 | `JOBNET_ACTOR_ID` | fra trin 2 | **Ny.** Uden den no-op'er cron'et. |
-| `APIFY_TOKEN` | Apify → **Settings → Integrations → Personal API token** | Bør allerede findes (Krak-berigelsen bruger den). Bekræft at den er sat i Production. |
+| `APIFY_TOKEN` | Apify → **Settings → Integrations → Personal API token** | Bør allerede findes. Bekræft at den er sat i Production. |
 | `APIFY_WEBHOOK_SECRET` | vilkårlig lang tilfældig streng | Bør allerede findes. Den **samme** værdi bruges til at signere og til at verificere — se nedenfor. |
 | `NEXT_PUBLIC_APP_URL` | fx `https://sbotter.vercel.app` | Bruges til at bygge webhook-URL'en. Er den forkert, poster actoren til det forkerte sted. |
 | `CRON_SECRET` | vilkårlig lang tilfældig streng | Bør allerede findes; cron-routen afviser at køre uden. |
