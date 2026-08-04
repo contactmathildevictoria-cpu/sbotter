@@ -490,13 +490,27 @@ const DISCOVERY_EXPECTED_MS = 6_000;
 const WEBSITE_EXPECTED_MS = 52_000;
 
 /**
- * Companies whose CVR data Pass 1 will try to refresh per run.
+ * Rows Pass 1 selects per run.
  *
- * The old provider's 50/day cap is gone; the ceiling now is what fits in the
- * function's wall-clock budget. 200 is BATCH_CHUNK_SIZE × 10 chunks, which the
- * budget check below stops short of if the provider is slow.
+ * Deliberately higher than a run can actually process, so the wall-clock budget
+ * is the thing that bounds the pass and this is only a sane cap on the SELECT.
+ * The real ceiling is the provider's 20 lookups/minute: even an 800s function
+ * tops out around 266 companies.
  */
-const CVR_PASS_LIMIT = 200;
+const CVR_PASS_LIMIT = 400;
+
+/**
+ * Share of the run's budget Pass 1 may spend before it hands over.
+ *
+ * Pass 1 is now rate-limit-bound rather than network-bound: after the first
+ * chunk of BATCH_CHUNK_SIZE it spends most of its time asleep waiting for the
+ * per-minute window to reset. Left uncapped it would happily consume the entire
+ * budget on a deep queue and Passes 2 and 3 would silently never run — the
+ * queue would drain while contact data stopped improving.
+ *
+ * 70% keeps CVR the priority while guaranteeing the website passes a slice.
+ */
+const CVR_PASS_BUDGET_SHARE = 0.7;
 
 /**
  * One batch call plus the per-company writes that follow it. Generous, because
@@ -748,6 +762,9 @@ export async function enrichPendingCompanies(
 ): Promise<BatchEnrichSummary> {
   const supabase = createSupabaseServiceClient();
   const budgetMs = opts.budgetMs ?? DEFAULT_FAST_BUDGET_MS;
+  // Pass 1 stops at its share; Passes 2 and 3 still measure against the full
+  // budget, so they inherit whatever Pass 1 didn't spend.
+  const cvrBudgetMs = Math.round(budgetMs * CVR_PASS_BUDGET_SHARE);
   const startedAt = Date.now();
   let stoppedOnTime = false;
 
@@ -758,11 +775,17 @@ export async function enrichPendingCompanies(
     Date.now() - CVR_REFRESH_AFTER_DAYS * 24 * 60 * 60 * 1000,
   ).toISOString();
 
+  // Busiest companies first. A company with 30 open jobs is a better lead than
+  // one with a single posting, and at ~20 lookups/minute the queue takes hours
+  // to drain — so the order decides which leads are usable this afternoon
+  // rather than tomorrow. `cvr_last_fetched_at` breaks ties, keeping
+  // never-tried rows ahead of ones already retried.
   const { data: companies, error } = await supabase
     .from("companies")
     .select("id, cvr, name")
     .in("cvr_enrichment_status", ["pending", "failed"])
     .or(`cvr_last_fetched_at.is.null,cvr_last_fetched_at.lt.${staleBefore}`)
+    .order("open_jobs_count", { ascending: false })
     .order("cvr_last_fetched_at", { ascending: true, nullsFirst: true })
     .limit(CVR_PASS_LIMIT);
 
@@ -801,7 +824,9 @@ export async function enrichPendingCompanies(
   }
 
   for (const [index, chunk] of chunks.entries()) {
-    if (!shouldRunAnother(startedAt, budgetMs, Date.now(), CVR_CHUNK_EXPECTED_MS)) {
+    if (
+      !shouldRunAnother(startedAt, cvrBudgetMs, Date.now(), CVR_CHUNK_EXPECTED_MS)
+    ) {
       stoppedOnTime = true;
       console.warn(
         `[cvr] pass 1 stopping early at chunk ${index}/${chunks.length} — out of budget`,
@@ -861,7 +886,7 @@ export async function enrichPendingCompanies(
   // Name-search companies, one at a time (search + lookup per company).
   if (!stoppedOnQuota) {
     for (const [index, company] of withoutCvr.entries()) {
-      if (!shouldRunAnother(startedAt, budgetMs, Date.now(), CVR_EXPECTED_MS)) {
+      if (!shouldRunAnother(startedAt, cvrBudgetMs, Date.now(), CVR_EXPECTED_MS)) {
         stoppedOnTime = true;
         console.warn(
           `[cvr] pass 1 name search stopping at ${index}/${withoutCvr.length} — out of budget`,

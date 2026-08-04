@@ -79,6 +79,8 @@ Three rules that are easy to break by accident:
 - **Coalesce, never overwrite.** `buildCvrUpdate()` writes a column only when it is currently null. The two not-null booleans (`is_ad_protected`, `is_bankrupt`) may flip false → true only.
 - **Stamp `cvr_last_fetched_at` on every attempt**, hit or miss, or the pass re-requests the same companies every run and burns the monthly quota. It's left alone only when the provider blocked us and nothing was learned.
 
+**Throughput.** The binding constraint is the provider's **20 lookups/minute**, not the Vercel function limit. A run can never process more than `minutes × 20` companies, so a deep queue drains by running `/api/cron/enrich` *often* (every 15 min), not by raising `maxDuration` — that only helps up to the rate limit. Pass 1 is capped at `CVR_PASS_BUDGET_SHARE` of the run so it can't starve the website passes while it sits waiting on the rate-limit window. Steady state is cheap: once the queue is drained, the 30-day `CVR_REFRESH_AFTER_DAYS` window means most runs select nothing.
+
 ### Plans
 
 `src/lib/plans.ts` defines `PLAN_LIMITS` for `free` / `pro` / `enterprise`. The `profiles.plan` column exists today but is not enforced. When adding gates, import `PLAN_LIMITS[user.plan].<limit>` rather than hard-coding values.

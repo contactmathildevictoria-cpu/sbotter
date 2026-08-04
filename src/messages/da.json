@@ -62,6 +62,8 @@
       "updated": "Opdateret: {time}",
       "updatedNever": "Ingen data hentet endnu",
       "updatedStaleHint": "Der er ikke kommet nye jobopslag ind i over 48 timer — tjek om scraperen kører",
+      "enriched": "{enriched} af {total} beriget",
+      "enrichedQueued": "{remaining} i kø",
       "pageSize": "Sidestørrelse",
       "perPageN": "{n} pr. side",
       "perPageAll": "Alle",
