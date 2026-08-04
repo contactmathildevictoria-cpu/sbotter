@@ -71,13 +71,48 @@ describe("the AI pass has its own cron", () => {
     expect(aiCron).toMatch(/cron_not_configured/);
   });
 
-  it("is scheduled, offset from the enrich cron so they don't overlap", () => {
+  it("is NOT scheduled — the AI pass is manual-only", () => {
+    // Unscheduling it is half the cost control (the ENABLE_AI_ENRICHMENT flag
+    // is the other half). Re-adding a schedule here silently restarts the
+    // billing, so pin it.
     const paths = vercelJson.crons.map((c) => c.path);
-    expect(paths).toContain("/api/cron/ai-phone");
+    expect(paths).not.toContain("/api/cron/ai-phone");
+  });
+});
 
-    const ai = vercelJson.crons.find((c) => c.path === "/api/cron/ai-phone");
-    const enrich = vercelJson.crons.find((c) => c.path === "/api/cron/enrich");
-    expect(ai?.schedule).not.toBe(enrich?.schedule);
+describe("AI enrichment is behind a kill switch", () => {
+  const env = read("src/lib/env.ts");
+  const aiPhone = read("src/lib/ai-phone.ts");
+
+  it("defaults to off when the env var is unset", () => {
+    expect(env).toMatch(/get enableAiEnrichment\(\)/);
+    expect(env).toMatch(/flag\(process\.env\.ENABLE_AI_ENRICHMENT\)/);
+    // `flag` only returns true for an explicit "true"/"1"; unset reads false.
+    expect(env).toMatch(/normalized === "true" \|\| normalized === "1"/);
+  });
+
+  it("guards the only place that calls the Anthropic API", () => {
+    // findPhoneViaAI is the single choke point: it is the one function in the
+    // repo that constructs an Anthropic client and calls messages.create.
+    expect(aiPhone).toMatch(/if \(!env\.enableAiEnrichment\)/);
+    // The guard must precede the API key read and the call itself.
+    const guardAt = aiPhone.indexOf("if (!env.enableAiEnrichment)");
+    const callAt = aiPhone.indexOf("messages.create");
+    expect(guardAt).toBeGreaterThan(-1);
+    expect(guardAt).toBeLessThan(callAt);
+  });
+
+  it("stops the batch pass before it touches the database", () => {
+    const guardAt = cvr.indexOf("if (!env.enableAiEnrichment)");
+    const selectAt = cvr.indexOf('.eq("ai_enrichment_status", "pending")');
+    expect(guardAt).toBeGreaterThan(-1);
+    expect(guardAt).toBeLessThan(selectAt);
+    expect(cvr).toMatch(/skippedDisabled: true/);
+  });
+
+  it("leaves the code in place so it can be switched back on", () => {
+    expect(aiPhone).toMatch(/messages\.create/);
+    expect(cvr).toMatch(/await findPhoneViaAI\(/);
   });
 });
 

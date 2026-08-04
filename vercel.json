@@ -10,10 +10,6 @@
       "schedule": "0 */6 * * *"
     },
     {
-      "path": "/api/cron/ai-phone",
-      "schedule": "30 */6 * * *"
-    },
-    {
       "path": "/api/cron/daily-list",
       "schedule": "0 4 * * *"
     }

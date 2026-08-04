@@ -11,6 +11,12 @@ function optional(value: string | undefined): string | undefined {
   return value && value.length > 0 ? value : undefined;
 }
 
+/** Opt-in boolean flag: anything but an explicit "true" / "1" reads as false. */
+function flag(value: string | undefined): boolean {
+  const normalized = value?.trim().toLowerCase();
+  return normalized === "true" || normalized === "1";
+}
+
 export const env = {
   get supabaseUrl() {
     return required("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL);
@@ -63,6 +69,13 @@ export const env = {
     // Optional: Pass 4 (AI phone lookup) logs and skips when it's missing,
     // rather than failing the whole enrichment batch.
     return optional(process.env.ANTHROPIC_API_KEY);
+  },
+  get enableAiEnrichment() {
+    // Kill switch for Pass 4. OFF unless explicitly set to "true": every lookup
+    // runs billed web searches on top of Opus tokens, and the layer is worth
+    // its cost only in bursts. Off means no Anthropic call is made at all —
+    // the code stays in place so it can be switched back on.
+    return flag(process.env.ENABLE_AI_ENRICHMENT);
   },
   get cronSecret() {
     // Bearer secret Vercel Cron sends in the Authorization header. Optional here;

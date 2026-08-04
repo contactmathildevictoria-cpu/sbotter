@@ -1,5 +1,9 @@
 # AI-telefonfinderen (fjerde berigelseslag)
 
+> **⚠️ Laget er slået fra.** `ENABLE_AI_ENRICHMENT` er som standard `false`, og
+> cron-kørslen er fjernet fra `vercel.json`. Se [Kill switch](#kill-switch)
+> nedenfor. Koden står urørt og kan tændes igen med én env var.
+
 Det fjerde og sidste lag i telefon-berigelsen. Kører **kun** for firmaer hvor
 CVR, Krak og website-scraperen alle er kommet op tomme. En LLM med websøgning
 slår nummeret op i den lange hale — Proff, LinkedIn, lokale sider.
@@ -46,6 +50,33 @@ cron-loggen.
 
 Uden `ANTHROPIC_API_KEY` springer Pass 4 pænt over med en log-linje; resten af
 berigelsen kører videre.
+
+## Kill switch
+
+Laget kostede for meget, så det er slukket på to niveauer:
+
+| Niveau | Hvad |
+|---|---|
+| `ENABLE_AI_ENRICHMENT` | Skal være `"true"` (eller `"1"`). Alt andet — inkl. usat — betyder fra. Læses via `env.enableAiEnrichment` i `src/lib/env.ts`. |
+| Cron | `/api/cron/ai-phone` står **ikke** længere i `vercel.json`. Ruten findes stadig og kan kaldes manuelt. |
+
+Flaget tjekkes to steder, begge før noget som helst arbejde går i gang:
+
+- `findPhoneViaAI` i `src/lib/ai-phone.ts` — det eneste sted i repoet der kalder
+  Anthropics API. Returnerer `null` med en `[ai] lookup skipped`-linje.
+- `runAiPhonePass` i `src/lib/cvr.ts` — returnerer `{ skippedDisabled: true }`
+  før den overhovedet rammer databasen, så ingen rækker får skiftet status.
+
+Sådan kører du en batch i hånden, når flaget er tændt:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/cron/ai-phone
+```
+
+Svarer den `{"skippedDisabled": true}`, er flaget stadig slukket.
+
+`src/lib/enrich-passes.test.ts` pinner begge dele: at flaget defaulter til fra,
+at guarden ligger før API-kaldet, og at ruten ikke er blevet gen-skemalagt.
 
 ## Åbent spørgsmål: outputform
 

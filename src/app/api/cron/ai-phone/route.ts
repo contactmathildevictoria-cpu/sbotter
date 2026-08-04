@@ -25,13 +25,22 @@ function timingSafeMatch(a: string, b: string): boolean {
   }
 }
 
-// GET /api/cron/ai-phone — invoked by Vercel Cron every 6h, offset from the
-// enrich cron.
+// GET /api/cron/ai-phone — MANUAL ONLY.
 //
-// The AI phone lookup lives here rather than in /api/companies/enrich-batch on
-// purpose: one lookup runs a web search and can take ~40s, so a handful of them
-// exceeds any interactive request's time limit. Keeping it on its own schedule
-// is what stops the "Enrich all" button from hanging.
+// Deliberately absent from vercel.json: the AI layer costs a billed web search
+// plus Opus tokens per company, so it no longer runs on a schedule. Trigger a
+// batch by hand when you want one:
+//
+//   curl -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/cron/ai-phone
+//
+// It still returns immediately with `skippedDisabled: true` unless
+// ENABLE_AI_ENRICHMENT is "true" — the flag is the real switch, this route just
+// stopped firing on its own.
+//
+// The lookup lives here rather than in /api/companies/enrich-batch on purpose:
+// one lookup runs a web search and can take ~40s, so a handful of them exceeds
+// any interactive request's time limit. Keeping it off the batch is what stops
+// the "Enrich all" button from hanging.
 export async function GET(request: NextRequest) {
   const secret = env.cronSecret;
   if (!secret) {

@@ -565,6 +565,8 @@ export type AiPassSummary = {
   failed: number;
   remaining: number;
   skippedNoKey: boolean;
+  /** ENABLE_AI_ENRICHMENT is off — the pass made no Anthropic call at all. */
+  skippedDisabled: boolean;
   calls: number;
   webSearches: number;
   inputTokens: number;
@@ -579,7 +581,10 @@ export type AiPassSummary = {
  * Independently callable: the enrichment batch no longer runs it, and
  * /api/cron/ai-phone calls only this. Selects only rows where phone, krak_phone
  * AND website_phone are all null and the AI lookup hasn't been tried. A no-op
- * with a log line when no API key is configured.
+ * with a log line when the layer is switched off or no API key is configured.
+ *
+ * Since the AI cron was unscheduled this only runs when someone invokes
+ * /api/cron/ai-phone by hand, and only when ENABLE_AI_ENRICHMENT is on.
  */
 export async function runAiPhonePass(
   opts: { limit?: number; budgetMs?: number } = {},
@@ -595,12 +600,22 @@ export async function runAiPhonePass(
     failed: 0,
     remaining: 0,
     skippedNoKey: false,
+    skippedDisabled: false,
     calls: 0,
     webSearches: 0,
     inputTokens: 0,
     outputTokens: 0,
     stoppedOnTime: false,
   };
+
+  // Cost kill switch, checked before any query runs: off means the pass does
+  // nothing at all — no selection, no status writes, no Anthropic call.
+  if (!env.enableAiEnrichment) {
+    console.log(
+      "[ai] pass 4 skipped — ENABLE_AI_ENRICHMENT is off (set it to \"true\" to re-enable)",
+    );
+    return { ...empty, skippedDisabled: true };
+  }
 
   if (!env.anthropicApiKey) {
     console.log("[ai] pass 4 skipped — ANTHROPIC_API_KEY not configured");
@@ -700,6 +715,7 @@ export async function runAiPhonePass(
     failed: aiFailed,
     remaining: aiRemaining ?? 0,
     skippedNoKey: false,
+    skippedDisabled: false,
     calls,
     webSearches,
     inputTokens,
