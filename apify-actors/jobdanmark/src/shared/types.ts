@@ -32,24 +32,3 @@ export interface ScrapedListing {
     description: string | null;
   };
 }
-
-// Input company the Krak enricher Actor looks up (sent by Sbotter in the run
-// input). `id` is the Sbotter company UUID — echoed back as `companyId` so the
-// webhook can match results to rows.
-export interface KrakCompanyInput {
-  id: string;
-  name: string;
-  city: string | null;
-}
-
-// One per-company result the Krak enricher Actor posts back. The Actor only sets
-// `matched: true` when the Krak listing clearly matches the requested company;
-// Sbotter trusts phone/contact data only then (and only fills empty fields).
-export interface KrakLookupResult {
-  companyId: string;
-  matched: boolean;
-  phone: string | null;
-  contactPerson: string | null;
-  contactTitle: string | null;
-  krakUrl: string | null;
-}

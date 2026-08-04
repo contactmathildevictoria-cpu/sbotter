@@ -4,14 +4,13 @@ import { env } from "@/lib/env";
 /**
  * Starting scheduled scrape runs on Apify.
  *
- * Mirrors startKrakEnrichmentRun in krak.ts: POST to the Actor's /runs endpoint
- * and return immediately. The Actor scrapes for minutes afterwards and POSTs its
- * dataset to /api/ingest/apify itself, signed with the shared
- * APIFY_WEBHOOK_SECRET — so the ingest path is already in place and unchanged.
+ * POST to the Actor's /runs endpoint and return immediately. The Actor scrapes
+ * for minutes afterwards and POSTs its dataset to /api/ingest/apify itself,
+ * signed with the shared APIFY_WEBHOOK_SECRET — so the ingest path is already
+ * in place and unchanged.
  *
- * Unlike the Krak starter this never throws. It backs a cron, and a missing
- * token or Actor id is a not-yet-configured deployment, not a failure worth
- * alerting on.
+ * This never throws. It backs a cron, and a missing token or Actor id is a
+ * not-yet-configured deployment, not a failure worth alerting on.
  */
 
 /**

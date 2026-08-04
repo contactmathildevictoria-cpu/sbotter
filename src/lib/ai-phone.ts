@@ -117,7 +117,7 @@ export type AiApplyStatus = "enriched" | "no_match" | "failed" | "skipped";
 
 /**
  * Writes an AI result. FILL-EMPTY-ONLY: touches only the ai_* columns and the
- * status, never the canonical phone / any CVR, Krak or website column.
+ * status, never the canonical phone / any CVR or website column.
  *
  * Re-reads the trusted phone columns first, so a company that gained a number
  * from another layer since the batch selected it is retired as `skipped` and
@@ -132,7 +132,7 @@ export async function applyAiPhoneResult(
 
   const { data: company, error: readError } = await supabase
     .from("companies")
-    .select("phone, krak_phone, website_phone")
+    .select("phone, website_phone")
     .eq("id", companyId)
     .maybeSingle();
 

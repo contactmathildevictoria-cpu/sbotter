@@ -10,6 +10,9 @@ import { join } from "node:path";
  * approach as enrich-passes.test.ts. What it pins is the regression itself:
  * the spinner was keyed off `cvr_enrichment_status === "pending"`, which means
  * "never attempted", so "Henter data…" showed on every empty row forever.
+ *
+ * The decision itself is made on the server and unit-tested in
+ * src/lib/leads/enrich-state.test.ts; this only pins the wiring.
  */
 
 const root = join(import.meta.dirname, "..", "..", "..");
@@ -29,10 +32,8 @@ describe("the contact column only spins for a job that is actually running", () 
     expect(source).not.toMatch(/if \(status === "pending"/);
   });
 
-  it("spins for the one genuine in-flight state in the schema", () => {
-    // Krak is the only pass that queues work with a third party and comes back
-    // later; CVR and the website scraper are synchronous within a batch.
-    expect(source).toMatch(/krakStatus === "queued"/);
+  it("spins on the server's verdict rather than on a raw status", () => {
+    expect(source).toMatch(/if \(running && !busy\)/);
   });
 
   it("renders an em dash for every non-actionable state", () => {
@@ -47,7 +48,12 @@ describe("the contact column only spins for a job that is actually running", () 
     expect(source).toMatch(/t\("retry"\)/);
   });
 
-  it("is handed the Krak status by the table", () => {
-    expect(table).toMatch(/krakStatus=\{row\.krak_enrichment_status\}/);
+  it("is handed the verdict by the table, computed over every pass", () => {
+    expect(table).toMatch(/running=\{isCompanyEnriching\(row\)\}/);
+  });
+
+  it("no longer knows about Krak", () => {
+    expect(source).not.toMatch(/krak/i);
+    expect(table).not.toMatch(/krak/i);
   });
 });

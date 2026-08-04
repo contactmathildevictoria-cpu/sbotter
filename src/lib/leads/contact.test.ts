@@ -15,9 +15,6 @@ const EMPTY = {
   website_email: null,
   website_contact_person: null,
   website_contact_title: null,
-  krak_phone: null,
-  krak_contact_person: null,
-  krak_contact_title: null,
   ai_phone: null,
   ai_contact_person: null,
   ai_source_url: null,
@@ -59,12 +56,11 @@ describe("resolveCompanyContact — direktion from CVR", () => {
     expect(c.contactTitle).toBeNull();
   });
 
-  it("still outranks website and Krak contacts", () => {
+  it("still outranks website contacts", () => {
     const c = resolveCompanyContact({
       ...EMPTY,
       cvr_directors: [{ name: "Direktør", title: "DIREKTØR" }],
       website_contact_person: "Web Person",
-      krak_contact_person: "Krak Person",
     });
     expect(c.contactName).toBe("Direktør");
     expect(c.contactSource).toBe("cvr");
@@ -93,12 +89,11 @@ describe("resolveCompanyContact — direktion from CVR", () => {
 });
 
 describe("resolveCompanyContact", () => {
-  it("prefers CVR over website and Krak", () => {
+  it("prefers CVR over website", () => {
     const c = resolveCompanyContact({
       ...EMPTY,
       phone: "11111111",
       website_phone: "22222222",
-      krak_phone: "33333333",
     });
     expect(c.phone).toBe("11111111");
     expect(c.phoneSource).toBe("cvr");
@@ -108,16 +103,9 @@ describe("resolveCompanyContact", () => {
     const c = resolveCompanyContact({
       ...EMPTY,
       website_phone: "22222222",
-      krak_phone: "33333333",
     });
     expect(c.phone).toBe("22222222");
     expect(c.phoneSource).toBe("website");
-  });
-
-  it("falls back to Krak only when CVR and website are both empty", () => {
-    const c = resolveCompanyContact({ ...EMPTY, krak_phone: "33333333" });
-    expect(c.phone).toBe("33333333");
-    expect(c.phoneSource).toBe("krak");
   });
 
   it("has no title when the contact name came from CVR", () => {
@@ -138,22 +126,12 @@ describe("resolveCompanyContact", () => {
       ...EMPTY,
       website_contact_person: "Jens Jensen",
       website_contact_title: "CTO",
-      krak_contact_person: "Anna And",
-      krak_contact_title: "Direktør",
     });
     expect(fromWebsite.contactName).toBe("Jens Jensen");
     expect(fromWebsite.contactTitle).toBe("CTO");
-
-    const fromKrak = resolveCompanyContact({
-      ...EMPTY,
-      krak_contact_person: "Anna And",
-      krak_contact_title: "Direktør",
-    });
-    expect(fromKrak.contactName).toBe("Anna And");
-    expect(fromKrak.contactTitle).toBe("Direktør");
   });
 
-  it("never sources an email from Krak", () => {
+  it("sources an email from CVR or the website only", () => {
     const c = resolveCompanyContact({
       ...EMPTY,
       website_email: "kontakt@eksempel.dk",
@@ -170,7 +148,7 @@ describe("resolveCompanyContact", () => {
     expect(c.phoneSource).toBeNull();
   });
 
-  it("falls back to AI only when all three trusted layers are empty", () => {
+  it("falls back to AI only when both trusted layers are empty", () => {
     const c = resolveCompanyContact({
       ...EMPTY,
       ai_phone: "70208060",
@@ -182,7 +160,7 @@ describe("resolveCompanyContact", () => {
   });
 
   it("never lets an AI phone outrank a trusted one", () => {
-    for (const trusted of ["phone", "website_phone", "krak_phone"] as const) {
+    for (const trusted of ["phone", "website_phone"] as const) {
       const c = resolveCompanyContact({
         ...EMPTY,
         [trusted]: "11223344",
@@ -235,22 +213,22 @@ describe("resolveCompanyContact", () => {
     // The AI layer stores no job title.
     expect(fromAi.contactTitle).toBeNull();
 
-    const krakWins = resolveCompanyContact({
+    const websiteWins = resolveCompanyContact({
       ...EMPTY,
-      krak_contact_person: "Anna And",
-      krak_contact_title: "Direktør",
+      website_contact_person: "Anna And",
+      website_contact_title: "Direktør",
       ai_contact_person: "Mette Hansen",
       ai_source_url: AI_SOURCE,
     });
-    expect(krakWins.contactName).toBe("Anna And");
-    expect(krakWins.contactSource).toBe("krak");
-    expect(krakWins.contactSourceUrl).toBeNull();
+    expect(websiteWins.contactName).toBe("Anna And");
+    expect(websiteWins.contactSource).toBe("website");
+    expect(websiteWins.contactSourceUrl).toBeNull();
   });
 
   it("accepts a partial select() result", () => {
-    // Only two of the ten fields present — the type and the cascade must cope.
-    const c = resolveCompanyContact({ krak_phone: "33333333" });
-    expect(c.phone).toBe("33333333");
+    // Only one of the many fields present — the type and the cascade must cope.
+    const c = resolveCompanyContact({ website_phone: "22222222" });
+    expect(c.phone).toBe("22222222");
     expect(c.hasAny).toBe(true);
   });
 });

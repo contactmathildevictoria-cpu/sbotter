@@ -1,19 +1,17 @@
 /**
- * Resolves a company's contact details across the three enrichment pipelines.
+ * Resolves a company's contact details across the enrichment pipelines.
  *
  * PURE — no I/O, no `server-only`. Importable from RSCs, client components,
  * route handlers and tests alike.
  *
- * The three pipelines write into disjoint column sets and never overwrite each
- * other: CVR owns `phone` / `email` / `contact_person_name`, the website
- * scraper owns `website_*`, Krak owns `krak_*`. So the per-field cascade below
- * is what turns three partial records into one contact.
+ * The pipelines write into disjoint column sets and never overwrite each other:
+ * CVR owns `phone` / `email` / `contact_person_name`, the website scraper owns
+ * `website_*`, the AI layer owns `ai_*`. So the per-field cascade below is what
+ * turns several partial records into one contact.
  *
- * Order is CVR → website → Krak → AI. Note that docs/fase-1-liste-motor-og-crm.md
- * once described it as CVR → Krak → website; the shipped behaviour has always
- * been website first (the scraper usually finds a direct contact where Krak
- * only has the switchboard), and changing it would silently alter what every
- * existing user sees in the leads table and the CSV export.
+ * Order is CVR → website → AI. A fourth source, Krak, used to sit between
+ * website and AI; it was removed after never returning a single match, and its
+ * columns were dropped from `companies`.
  *
  * "ai" is last and is the one source that is not trusted on its own: it comes
  * from an LLM with web search, so it always carries `phoneSourceUrl` and must
@@ -23,7 +21,7 @@
 
 import type { CvrDirector } from "@/types/database";
 
-export type ContactSource = "cvr" | "website" | "krak" | "ai";
+export type ContactSource = "cvr" | "website" | "ai";
 
 /**
  * Structural, all-optional shape so a partial `select()` satisfies it just as
@@ -43,9 +41,6 @@ export type CompanyContactFields = {
   website_email?: string | null;
   website_contact_person?: string | null;
   website_contact_title?: string | null;
-  krak_phone?: string | null;
-  krak_contact_person?: string | null;
-  krak_contact_title?: string | null;
   ai_phone?: string | null;
   ai_contact_person?: string | null;
   ai_source_url?: string | null;
@@ -86,17 +81,14 @@ export function resolveCompanyContact(
   const aiPhone = aiSourceUrl ? (company.ai_phone ?? null) : null;
   const aiContactPerson = aiSourceUrl ? (company.ai_contact_person ?? null) : null;
 
-  const phone =
-    company.phone ?? company.website_phone ?? company.krak_phone ?? aiPhone ?? null;
+  const phone = company.phone ?? company.website_phone ?? aiPhone ?? null;
   const phoneSource: ContactSource | null = company.phone
     ? "cvr"
     : company.website_phone
       ? "website"
-      : company.krak_phone
-        ? "krak"
-        : aiPhone
-          ? "ai"
-          : null;
+      : aiPhone
+        ? "ai"
+        : null;
 
   const email = company.email ?? company.website_email ?? null;
   const emailSource: CompanyContact["emailSource"] = company.email
@@ -113,29 +105,24 @@ export function resolveCompanyContact(
   const contactName =
     cvrContactName ??
     company.website_contact_person ??
-    company.krak_contact_person ??
     aiContactPerson ??
     null;
   const contactSource: ContactSource | null = cvrContactName
     ? "cvr"
     : company.website_contact_person
       ? "website"
-      : company.krak_contact_person
-        ? "krak"
-        : aiContactPerson
-          ? "ai"
-          : null;
-  // The title has to follow whichever source supplied the name, or a Krak
-  // title could end up captioning a website-scraped person. CVR only has a
-  // title when the name came from the direktion; the AI layer stores none.
+      : aiContactPerson
+        ? "ai"
+        : null;
+  // The title has to follow whichever source supplied the name, or one source's
+  // title could end up captioning another source's person. CVR only has a title
+  // when the name came from the direktion; the AI layer stores none.
   const contactTitle =
     contactSource === "cvr"
       ? (director?.name === contactName ? (director?.title ?? null) : null)
       : contactSource === "website"
         ? (company.website_contact_title ?? null)
-        : contactSource === "krak"
-          ? (company.krak_contact_title ?? null)
-          : null;
+        : null;
 
   return {
     phone,

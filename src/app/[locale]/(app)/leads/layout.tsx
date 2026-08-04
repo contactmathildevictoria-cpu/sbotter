@@ -1,7 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { LeadTabs } from "@/components/leads/lead-tabs";
 import { EnrichAllButton } from "@/components/leads/enrich-all-button";
-import { FindPhonesButton } from "@/components/leads/find-phones-button";
 
 export default async function LeadsLayout({
   children,
@@ -22,7 +21,6 @@ export default async function LeadsLayout({
           <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
-          <FindPhonesButton />
           <EnrichAllButton />
         </div>
       </header>

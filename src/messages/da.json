@@ -112,15 +112,6 @@
       "enrichAllTimeout": "Berigelsen tog for lang tid og blev afbrudt. Prøv igen — det færdige arbejde er gemt.",
       "enrichAllPartial": "Nåede ikke igennem hele køen inden for tidsgrænsen — resten tages næste gang."
     },
-    "krak": {
-      "findPhones": "Find telefonnumre",
-      "findPhonesRunning": "Starter…",
-      "findPhonesStarted": "Startede opslag for {started} virksomheder — resultater kommer om lidt",
-      "findPhonesNone": "Ingen virksomheder mangler telefonnummer",
-      "findPhonesError": "Kunne ikke starte opslag. Prøv igen.",
-      "source": "Krak",
-      "sourceKrak": "Fra Krak.dk"
-    },
     "pagination": {
       "next": "Næste",
       "prev": "Forrige",

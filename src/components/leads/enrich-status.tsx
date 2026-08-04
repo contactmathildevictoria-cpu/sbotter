@@ -6,22 +6,17 @@ import { useTranslations } from "next-intl";
 import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import type {
-  CvrEnrichmentStatus,
-  KrakEnrichmentStatus,
-} from "@/types/database";
+import type { CvrEnrichmentStatus } from "@/types/database";
 
 const Dash = () => <span className="text-muted-foreground">—</span>;
 
 /**
  * The contact-column affordance for a company we have no contact data for.
  *
- * A spinner here means "a job is running right now", and nothing else. It used
- * to be shown for `cvr_enrichment_status === "pending"`, which is not a
- * running job — it is "never attempted", the state most rows sit in forever.
- * That is what made "Henter data…" appear on every empty row and never
- * resolve. `queued` on the Krak pass is the only genuine in-flight state in
- * the schema: an Apify run has been started and results are on their way back.
+ * A spinner here means "a job is running right now", and nothing else — see
+ * src/lib/leads/enrich-state.ts, which decides `running` on the server and owns
+ * the rule that a queue older than 30 minutes is treated as failed rather than
+ * spinning forever.
  *
  * Everything else renders an em dash, except failed / no-match CVR rows, which
  * keep their label and retry button — those are outcomes, not loading states.
@@ -29,18 +24,19 @@ const Dash = () => <span className="text-muted-foreground">—</span>;
 export function EnrichStatus({
   companyId,
   status,
-  krakStatus,
+  running,
 }: {
   companyId: string;
   status: CvrEnrichmentStatus;
-  krakStatus: KrakEnrichmentStatus;
+  /** An enrichment pass is genuinely in flight for this company. */
+  running: boolean;
 }) {
   const t = useTranslations("Leads.enrich");
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [busy, setBusy] = useState(false);
 
-  if (krakStatus === "queued" && !busy) {
+  if (running && !busy) {
     return (
       <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
         <Loader2 className="size-3 animate-spin" />

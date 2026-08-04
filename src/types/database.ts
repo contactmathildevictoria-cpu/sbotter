@@ -19,14 +19,6 @@ export type CvrEnrichmentStatus =
   | "no_match"
   | "skipped";
 
-export type KrakEnrichmentStatus =
-  | "pending"
-  | "queued"
-  | "enriched"
-  | "failed"
-  | "no_match"
-  | "skipped";
-
 export type AiEnrichmentStatus =
   | "pending"
   | "enriched"
@@ -163,12 +155,6 @@ export type Database = {
           cvr_directors: CvrDirector[] | null;
           cvr_signature_rule: string | null;
           cvr_last_fetched_at: string | null;
-          krak_phone: string | null;
-          krak_contact_person: string | null;
-          krak_contact_title: string | null;
-          krak_url: string | null;
-          krak_enriched_at: string | null;
-          krak_enrichment_status: KrakEnrichmentStatus;
           website_phone: string | null;
           website_email: string | null;
           website_contact_person: string | null;
@@ -218,12 +204,6 @@ export type Database = {
           cvr_directors?: CvrDirector[] | null;
           cvr_signature_rule?: string | null;
           cvr_last_fetched_at?: string | null;
-          krak_phone?: string | null;
-          krak_contact_person?: string | null;
-          krak_contact_title?: string | null;
-          krak_url?: string | null;
-          krak_enriched_at?: string | null;
-          krak_enrichment_status?: KrakEnrichmentStatus;
           website_phone?: string | null;
           website_email?: string | null;
           website_contact_person?: string | null;
@@ -273,12 +253,6 @@ export type Database = {
           cvr_directors?: CvrDirector[] | null;
           cvr_signature_rule?: string | null;
           cvr_last_fetched_at?: string | null;
-          krak_phone?: string | null;
-          krak_contact_person?: string | null;
-          krak_contact_title?: string | null;
-          krak_url?: string | null;
-          krak_enriched_at?: string | null;
-          krak_enrichment_status?: KrakEnrichmentStatus;
           website_phone?: string | null;
           website_email?: string | null;
           website_contact_person?: string | null;

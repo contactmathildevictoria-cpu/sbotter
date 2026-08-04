@@ -4,9 +4,12 @@
 > cron-kørslen er fjernet fra `vercel.json`. Se [Kill switch](#kill-switch)
 > nedenfor. Koden står urørt og kan tændes igen med én env var.
 
-Det fjerde og sidste lag i telefon-berigelsen. Kører **kun** for firmaer hvor
-CVR, Krak og website-scraperen alle er kommet op tomme. En LLM med websøgning
-slår nummeret op i den lange hale — Proff, LinkedIn, lokale sider.
+Det sidste lag i telefon-berigelsen. Kører **kun** for firmaer hvor både CVR og
+website-scraperen er kommet op tomme. En LLM med websøgning slår nummeret op i
+den lange hale — Proff, LinkedIn, lokale sider.
+
+(Et Krak.dk-lag lå tidligere mellem website-scraperen og dette lag. Det er
+fjernet — det fandt aldrig et eneste match — så kæden er nu CVR → website → AI.)
 
 ## Kernereglen: proveniens
 
